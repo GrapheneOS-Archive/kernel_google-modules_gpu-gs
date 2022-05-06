@@ -67,13 +67,6 @@ extern struct protected_mode_ops pixel_protected_ops;
 #endif /* CONFIG_MALI_PIXEL_GPU_SECURE_RENDERING */
 
 /**
- * Autosuspend delay
- *
- * The delay time (in milliseconds) to be used for autosuspend
- */
-#define AUTO_SUSPEND_DELAY (100)
-
-/**
  * DVFS Utilization evaluation period
  *
  * The amount of time (in milliseconds) between sucessive measurements of the
@@ -235,7 +228,9 @@ struct gpu_dvfs_metrics_uid_stats;
  * @pm.domain:                  The power domain the GPU is in.
  * @pm.status_reg_offset:       Register offset to the G3D status in the PMU. Set via DT.
  * @pm.status_local_power_mask: Mask to extract power status of the GPU. Set via DT.
- * @pm.autosuspend_delay:       Delay (in ms) before PM runtime should trigger auto suspend.
+ * @pm.use_autosuspend:         Use autosuspend on the TOP domain if true, sync suspend if false.
+ * @pm.autosuspend_delay:       Delay (in ms) before PM runtime should trigger auto suspend on TOP
+ *                              domain if use_autosuspend is true.
  * @pm.bcl_dev:                 Pointer to the Battery Current Limiter device.
  *
  * @tz_protection_enabled:      Storing the secure rendering state of the GPU. Access to this is
@@ -310,6 +305,7 @@ struct pixel_context {
 		struct exynos_pm_domain *domain;
 		unsigned int status_reg_offset;
 		unsigned int status_local_power_mask;
+		bool use_autosuspend;
 		unsigned int autosuspend_delay;
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 		struct gpu_dvfs_opp_metrics power_off_metrics;
@@ -317,6 +313,9 @@ struct pixel_context {
 #endif /* CONFIG_MALI_MIDGARD_DVFS */
 #if IS_ENABLED(CONFIG_GOOGLE_BCL)
 		struct bcl_device *bcl_dev;
+#endif
+#ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
+		bool ifpo_enabled;
 #endif
 	} pm;
 
@@ -340,6 +339,7 @@ struct pixel_context {
 		struct delayed_work clockdown_work;
 		unsigned int clockdown_hysteresis;
 
+		bool updates_enabled;
 		struct gpu_dvfs_clk clks[GPU_DVFS_CLK_COUNT];
 
 		struct gpu_dvfs_opp *table;

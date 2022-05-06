@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2014-2015, 2018-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2014-2015, 2018-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -55,7 +55,7 @@ enum kbase_mmu_fault_type {
 };
 
 /**
- * enum kbase_mmu_cache_flush_type - enum for MMU operations
+ * enum kbase_mmu_op_type - enum for MMU operations
  * @KBASE_MMU_OP_NONE:        To help catch uninitialized struct
  * @KBASE_MMU_OP_FIRST:       The lower boundary of enum
  * @KBASE_MMU_OP_LOCK:        Lock memory region
@@ -100,22 +100,6 @@ struct kbase_mmu_hw_op_param {
  */
 void kbase_mmu_hw_configure(struct kbase_device *kbdev,
 		struct kbase_as *as);
-
-/**
- * kbase_mmu_hw_do_operation_locked - Issue an operation to the MMU.
- * @kbdev:         kbase device to issue the MMU operation on.
- * @as:            address space to issue the MMU operation on.
- * @op_param:      parameters for the operation.
- *
- * Issue an operation (MMU invalidate, MMU flush, etc) on the address space that
- * is associated with the provided kbase_context over the specified range
- *
- * Context: Expects the caller to hold the hwaccess_lock and the mmu_hw_mutex
- *
- * Return: Zero if the operation was successful, non-zero otherwise.
- */
-int kbase_mmu_hw_do_operation_locked(struct kbase_device *kbdev, struct kbase_as *as,
-			struct kbase_mmu_hw_op_param *op_param);
 
 /**
  * kbase_mmu_hw_do_operation - Issue an operation to the MMU.

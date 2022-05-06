@@ -20,6 +20,7 @@
 #if IS_ENABLED(CONFIG_CAL_IF)
 #include <soc/google/cal-if.h>
 #endif
+#include <soc/samsung/exynos-smc.h>
 
 /* Mali core includes */
 #include <mali_kbase.h>
@@ -78,12 +79,22 @@ static int gpu_pm_power_on_top(struct kbase_device *kbdev)
 
 	trace_gpu_power_state(ktime_get_ns() - start_ns,
 		GPU_POWER_LEVEL_GLOBAL, GPU_POWER_LEVEL_STACKS);
+	gpu_dvfs_enable_updates(kbdev);
 #ifdef CONFIG_MALI_MIDGARD_DVFS
+	kbase_pm_metrics_start(kbdev);
 	gpu_dvfs_event_power_on(kbdev);
 #endif
-#if IS_ENABLED(CONFIG_GOOGLE_BCL) && !IS_ENABLED(CONFIG_SOC_GS201)
+#if IS_ENABLED(CONFIG_GOOGLE_BCL)
+	if (!pc->pm.bcl_dev)
+		pc->pm.bcl_dev = google_retrieve_bcl_handle();
 	if (pc->pm.bcl_dev)
 		google_init_gpu_ratio(pc->pm.bcl_dev);
+#endif
+
+#if !IS_ENABLED(CONFIG_SOC_GS101)
+	if (exynos_smc(SMC_PROTECTION_SET, 0, PROT_G3D, SMC_PROTECTION_ENABLE) != 0) {
+		dev_err(kbdev->dev, "Couldn't enable protected mode after GPU power-on");
+	}
 #endif
 
 	pc->pm.state = GPU_POWER_LEVEL_STACKS;
@@ -112,26 +123,42 @@ static void gpu_pm_power_off_top(struct kbase_device *kbdev)
 {
 	struct pixel_context *pc = kbdev->platform_context;
 	u64 start_ns = ktime_get_ns();
+	int prev_state;
 
 	mutex_lock(&pc->pm.lock);
 
+	prev_state = pc->pm.state;
 	if (pc->pm.state == GPU_POWER_LEVEL_STACKS) {
 		pm_runtime_put_sync(pc->pm.domain_devs[GPU_PM_DOMAIN_CORES]);
 		pc->pm.state = GPU_POWER_LEVEL_GLOBAL;
 	}
 
 	if (pc->pm.state == GPU_POWER_LEVEL_GLOBAL) {
-		pm_runtime_mark_last_busy(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
-		pm_runtime_put_autosuspend(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
+#if !IS_ENABLED(CONFIG_SOC_GS101)
+		if (exynos_smc(SMC_PROTECTION_SET, 0, PROT_G3D, SMC_PROTECTION_DISABLE) != 0) {
+			dev_err(kbdev->dev, "Couldn't disable protected mode before GPU power-off");
+		}
+#endif
 
-		trace_gpu_power_state(ktime_get_ns() - start_ns,
-			GPU_POWER_LEVEL_STACKS, GPU_POWER_LEVEL_GLOBAL);
+		gpu_dvfs_disable_updates(kbdev);
+
+		if (pc->pm.use_autosuspend) {
+			pm_runtime_mark_last_busy(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
+			pm_runtime_put_autosuspend(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
+		} else {
+			pm_runtime_put_sync_suspend(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
+		}
+		pc->pm.state = GPU_POWER_LEVEL_OFF;
+		trace_gpu_power_state(ktime_get_ns() - start_ns, prev_state, pc->pm.state);
 
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 		gpu_dvfs_event_power_off(kbdev);
+		kbase_pm_metrics_stop(kbdev);
 #endif
 
 	}
+
+	trace_gpu_power_state(ktime_get_ns() - start_ns, prev_state, pc->pm.state);
 
 	mutex_unlock(&pc->pm.lock);
 }
@@ -214,60 +241,6 @@ static void gpu_pm_callback_power_suspend(struct kbase_device *kbdev)
 #if IS_ENABLED(KBASE_PM_RUNTIME)
 
 /**
- * gpu_pm_callback_power_runtime_suspend() - Called when a TOP domain is going to runtime suspend
- *
- * @dev: The device that is going to runtime suspend
- *
- * This callback is made when @dev is about to enter runtime suspend. In our case, this occurs when
- * the TOP domain of GPU is about to enter runtime suspend. At this point we take the opportunity
- * to store that state will be lost and disable DVFS metrics gathering.
- *
- * Note: This function doesn't take the PM lock prior to updating GPU state as it doesn't explicitly
- *       attempt to update GPU power domain state. The caller of this function (or another function
- *       further up the callstack) will hold &power.lock for the TOP domain's &struct device and
- *       that is sufficient for ensuring serialization of the GPU power state.
- *
- * Return: Always returns 0.
- */
-static int gpu_pm_callback_power_runtime_suspend(struct device *dev)
-{
-	struct kbase_device *kbdev = dev_get_drvdata(dev);
-	struct pixel_context *pc = kbdev->platform_context;
-
-	dev_dbg(kbdev->dev, "%s\n", __func__);
-
-	WARN_ON(pc->pm.state > GPU_POWER_LEVEL_GLOBAL);
-	pc->pm.state = GPU_POWER_LEVEL_OFF;
-
-#ifdef CONFIG_MALI_MIDGARD_DVFS
-	kbase_pm_metrics_stop(kbdev);
-#endif
-
-	return 0;
-}
-
-/**
- * gpu_pm_callback_power_runtime_resume() - Called when a TOP domain is going to runtime resume
- *
- * @dev: The device that is going to runtime suspend
- *
- * This callback is made when @dev is about to runtime resume. In our case, this occurs when
- * the TOP domain of GPU is about to runtime resume. We use this callback to enable DVFS metrics
- * gathering.
- *
- * Return: Always returns 0.
- */
-static int gpu_pm_callback_power_runtime_resume(struct device *dev)
-{
-#ifdef CONFIG_MALI_MIDGARD_DVFS
-	struct kbase_device *kbdev = dev_get_drvdata(dev);
-
-	kbase_pm_metrics_start(kbdev);
-#endif
-	return 0;
-}
-
-/**
  * gpu_pm_callback_power_runtime_init() - Initialize runtime power management.
  *
  * @kbdev: The &struct kbase_device for the GPU.
@@ -286,14 +259,16 @@ static int gpu_pm_callback_power_runtime_init(struct kbase_device *kbdev)
 
 	dev_dbg(kbdev->dev, "%s\n", __func__);
 
-	pm_runtime_set_autosuspend_delay(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP],
-		pc->pm.autosuspend_delay);
-	pm_runtime_use_autosuspend(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
-
 	if (!pm_runtime_enabled(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]) ||
 		!pm_runtime_enabled(pc->pm.domain_devs[GPU_PM_DOMAIN_CORES])) {
 		dev_warn(kbdev->dev, "pm_runtime not enabled\n");
 		return -ENOSYS;
+	}
+
+	if (pc->pm.use_autosuspend) {
+		pm_runtime_set_autosuspend_delay(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP],
+			pc->pm.autosuspend_delay);
+		pm_runtime_use_autosuspend(pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]);
 	}
 
 	return 0;
@@ -336,7 +311,7 @@ static void gpu_pm_callback_power_runtime_term(struct kbase_device *kbdev)
 static void gpu_pm_power_on_cores(struct kbase_device *kbdev) {
 	struct pixel_context *pc = kbdev->platform_context;
 	mutex_lock(&pc->pm.lock);
-	if (pc->pm.state == GPU_POWER_LEVEL_GLOBAL) {
+	if (pc->pm.state == GPU_POWER_LEVEL_GLOBAL && pc->pm.ifpo_enabled) {
 		pm_runtime_get_sync(pc->pm.domain_devs[GPU_PM_DOMAIN_CORES]);
 		pc->pm.state = GPU_POWER_LEVEL_STACKS;
 
@@ -361,7 +336,7 @@ static void gpu_pm_power_on_cores(struct kbase_device *kbdev) {
 static void gpu_pm_power_off_cores(struct kbase_device *kbdev) {
 	struct pixel_context *pc = kbdev->platform_context;
 	mutex_lock(&pc->pm.lock);
-	if (pc->pm.state == GPU_POWER_LEVEL_STACKS) {
+	if (pc->pm.state == GPU_POWER_LEVEL_STACKS && pc->pm.ifpo_enabled) {
 		pm_runtime_put_sync(pc->pm.domain_devs[GPU_PM_DOMAIN_CORES]);
 		pc->pm.state = GPU_POWER_LEVEL_GLOBAL;
 
@@ -533,20 +508,17 @@ int gpu_pm_init(struct kbase_device *kbdev)
 		}
 	}
 
-	/*
-	 * We set up runtime pm callbacks specifically for the TOP domain. This is so that when we
-	 * use autosupend it will only affect the TOP domain and not CORES as we control the power
-	 * state of CORES directly.
-	 */
-	pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]->pm_domain->ops.runtime_suspend =
-		&gpu_pm_callback_power_runtime_suspend;
-	pc->pm.domain_devs[GPU_PM_DOMAIN_TOP]->pm_domain->ops.runtime_resume =
-		&gpu_pm_callback_power_runtime_resume;
+#ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
+	pc->pm.ifpo_enabled = false;
+#endif
 
 	if (of_property_read_u32(np, "gpu_pm_autosuspend_delay", &pc->pm.autosuspend_delay)) {
-		pc->pm.autosuspend_delay = AUTO_SUSPEND_DELAY;
-		dev_info(kbdev->dev, "autosuspend delay not set in DT, using default of %dms\n",
-			AUTO_SUSPEND_DELAY);
+		pc->pm.use_autosuspend = false;
+		pc->pm.autosuspend_delay = 0;
+		dev_info(kbdev->dev, "using synchronous suspend for TOP domain\n");
+	} else {
+		pc->pm.use_autosuspend = true;
+		dev_info(kbdev->dev, "autosuspend delay set to %ims for TOP domain\n", pc->pm.autosuspend_delay);
 	}
 
 	if (of_property_read_u32(np, "gpu_pmu_status_reg_offset", &pc->pm.status_reg_offset)) {

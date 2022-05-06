@@ -410,6 +410,17 @@ void kbase_csf_scheduler_pm_idle(struct kbase_device *kbdev);
 int kbase_csf_scheduler_wait_mcu_active(struct kbase_device *kbdev);
 
 /**
+ * kbase_csf_scheduler_pm_resume_no_lock - Reactivate the scheduler on system resume
+ *
+ * @kbdev: Instance of a GPU platform device that implements a CSF interface.
+ *
+ * This function will make the scheduler resume the scheduling of queue groups
+ * and take the power managemenet reference, if there are any runnable groups.
+ * The caller must have acquired the global Scheduler lock.
+ */
+void kbase_csf_scheduler_pm_resume_no_lock(struct kbase_device *kbdev);
+
+/**
  * kbase_csf_scheduler_pm_resume - Reactivate the scheduler on system resume
  *
  * @kbdev: Instance of a GPU platform device that implements a CSF interface.
@@ -418,6 +429,19 @@ int kbase_csf_scheduler_wait_mcu_active(struct kbase_device *kbdev);
  * and take the power managemenet reference, if there are any runnable groups.
  */
 void kbase_csf_scheduler_pm_resume(struct kbase_device *kbdev);
+
+/**
+ * kbase_csf_scheduler_pm_suspend_no_lock - Idle the scheduler on system suspend
+ *
+ * @kbdev: Instance of a GPU platform device that implements a CSF interface.
+ *
+ * This function will make the scheduler suspend all the running queue groups
+ * and drop its power managemenet reference.
+ * The caller must have acquired the global Scheduler lock.
+ *
+ * Return: 0 on success.
+ */
+int kbase_csf_scheduler_pm_suspend_no_lock(struct kbase_device *kbdev);
 
 /**
  * kbase_csf_scheduler_pm_suspend - Idle the scheduler on system suspend
@@ -635,5 +659,19 @@ void kbase_csf_scheduler_force_sleep(struct kbase_device *kbdev);
  * Return: true if the GPU idle event can be acknowledged.
  */
 bool kbase_csf_scheduler_process_gpu_idle_event(struct kbase_device *kbdev);
+
+#ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
+/**
+ * turn_on_sc_power_rails - Turn on the shader core power rails.
+ *
+ * @kbdev: Pointer to the device.
+ *
+ * This function is called to synchronously turn on the shader core power rails,
+ * before execution is resumed on the cores.
+ *
+ * scheduler lock must be held when calling this function
+ */
+void turn_on_sc_power_rails(struct kbase_device *kbdev);
+#endif
 
 #endif /* _KBASE_CSF_SCHEDULER_H_ */
