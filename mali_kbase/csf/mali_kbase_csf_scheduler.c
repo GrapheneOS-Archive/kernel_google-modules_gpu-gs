@@ -545,7 +545,7 @@ static void update_on_slot_queues_offsets(struct kbase_device *kbdev)
 #endif
 
 static void enqueue_gpu_idle_work(struct kbase_csf_scheduler *const scheduler,
-			unsigned long delay)
+			unsigned long delay_ms)
 {
 #ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
 	lockdep_assert_held(&scheduler->lock);
@@ -555,7 +555,7 @@ static void enqueue_gpu_idle_work(struct kbase_csf_scheduler *const scheduler,
 	atomic_set(&scheduler->gpu_no_longer_idle, false);
 #endif
 
-	mod_delayed_work(system_highpri_wq, &scheduler->gpu_idle_work, delay);
+	mod_delayed_work(system_highpri_wq, &scheduler->gpu_idle_work, msecs_to_jiffies(delay_ms));
 }
 
 bool kbase_csf_scheduler_process_gpu_idle_event(struct kbase_device *kbdev)
@@ -4129,29 +4129,45 @@ static void scheduler_update_idle_slots_status(struct kbase_device *kbdev,
 	lockdep_assert_held(&scheduler->lock);
 
 	spin_lock_irqsave(&scheduler->interrupt_lock, flags);
-	for_each_set_bit(i, scheduler->csg_slots_idle_mask, num_groups) {
+
+	for_each_set_bit(i, scheduler->csg_inuse_bitmap, num_groups) {
 		struct kbase_csf_csg_slot *csg_slot = &scheduler->csg_slots[i];
 		struct kbase_queue_group *group = csg_slot->resident_group;
 		struct kbase_csf_cmd_stream_group_info *const ginfo =
 						&global_iface->groups[i];
 		u32 csg_req;
 
-		clear_bit(i, scheduler->csg_slots_idle_mask);
-		KBASE_KTRACE_ADD_CSF_GRP(kbdev, CSG_SLOT_IDLE_CLEAR, group,
-					 scheduler->csg_slots_idle_mask[0]);
-		if (WARN_ON(!group))
+		if (WARN_ON(!group)) {
+			clear_bit(i, scheduler->csg_inuse_bitmap);
+			clear_bit(i, scheduler->csg_slots_idle_mask);
 			continue;
+		}
 
-		KBASE_KTRACE_ADD_CSF_GRP(kbdev, CSG_SLOT_STATUS_UPDATE, group,
-					 i);
+		if (test_bit(i, scheduler->csg_slots_idle_mask)) {
+			clear_bit(i, scheduler->csg_slots_idle_mask);
+			KBASE_KTRACE_ADD_CSF_GRP(kbdev, CSG_SLOT_IDLE_CLEAR, group,
+						scheduler->csg_slots_idle_mask[0]);
 
-		csg_req = kbase_csf_firmware_csg_output(ginfo, CSG_ACK);
-		csg_req ^= CSG_REQ_STATUS_UPDATE_MASK;
-		kbase_csf_firmware_csg_input_mask(ginfo, CSG_REQ, csg_req,
-						  CSG_REQ_STATUS_UPDATE_MASK);
+			KBASE_KTRACE_ADD_CSF_GRP(kbdev, CSG_UPDATE_IDLE_SLOT_REQ, group, i);
 
-		set_bit(i, csg_bitmap);
+			csg_req = kbase_csf_firmware_csg_output(ginfo, CSG_ACK);
+			csg_req ^= CSG_REQ_STATUS_UPDATE_MASK;
+			kbase_csf_firmware_csg_input_mask(ginfo, CSG_REQ, csg_req,
+							CSG_REQ_STATUS_UPDATE_MASK);
+
+			set_bit(i, csg_bitmap);
+		} else if (group->run_state == KBASE_CSF_GROUP_IDLE) {
+			/* In interrupt context, some previously 'nominal' idle
+			 * on-slot group could have been de-idled. Its idle flag may
+			 * have been cleared, mark the correct run_state for the next
+			 * tick/tock cycle here in the scheduler process context.
+			 */
+			group->run_state = KBASE_CSF_GROUP_RUNNABLE;
+		}
 	}
+	/* All the idle flags transferred to csg_bitmap, check its empty here */
+	WARN_ON(!bitmap_empty(scheduler->csg_slots_idle_mask, num_groups));
+
 	spin_unlock_irqrestore(&scheduler->interrupt_lock, flags);
 
 	/* The groups are aggregated into a single kernel doorbell request */

@@ -52,6 +52,23 @@ const u8 kbasep_csf_relative_to_queue_group_priority[KBASE_QUEUE_GROUP_PRIORITY_
 	BASE_QUEUE_GROUP_PRIORITY_LOW
 };
 
+/*
+ * struct irq_idle_and_protm_track - Object that tracks the idle and protected mode
+ *                                   request information in an interrupt case across
+ *                                   groups.
+ *
+ * @protm_grp: Possibly schedulable group that requested protected mode in the interrupt.
+ *             If NULL, no such case observed in the tracked interrupt case.
+ * @idle_seq:  The highest priority group that notified idle. If no such instnace in the
+ *             interrupt case, marked with the largest field value: U32_MAX.
+ * @idle_slot: The slot number if @p idle_seq is valid in the given tracking case.
+ */
+struct irq_idle_and_protm_track {
+	struct kbase_queue_group *protm_grp;
+	u32 idle_seq;
+	s8 idle_slot;
+};
+
 static void put_user_pages_mmap_handle(struct kbase_context *kctx,
 			struct kbase_queue *queue)
 {
@@ -406,9 +423,9 @@ int kbase_csf_queue_group_handle_is_valid(struct kbase_context *kctx,
 {
 	struct kbase_queue_group *group;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 	group = find_queue_group(kctx, group_handle);
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	return group ? 0 : -EINVAL;
 }
@@ -482,7 +499,7 @@ static int csf_queue_register_internal(struct kbase_context *kctx,
 	queue_addr = reg->buffer_gpu_addr;
 	queue_size = reg->buffer_size >> PAGE_SHIFT;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	/* Check if queue is already registered */
 	if (find_queue(kctx, queue_addr) != NULL) {
@@ -600,7 +617,7 @@ static int csf_queue_register_internal(struct kbase_context *kctx,
 out_unlock_vm:
 	kbase_gpu_vm_unlock(kctx);
 out:
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	return ret;
 }
@@ -656,7 +673,7 @@ void kbase_csf_queue_terminate(struct kbase_context *kctx,
 	else
 		reset_prevented = true;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 	queue = find_queue(kctx, term->buffer_gpu_addr);
 
 	if (queue) {
@@ -692,7 +709,7 @@ void kbase_csf_queue_terminate(struct kbase_context *kctx,
 		release_queue(queue);
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 	if (reset_prevented)
 		kbase_reset_gpu_allow(kbdev);
 }
@@ -704,7 +721,7 @@ int kbase_csf_queue_bind(struct kbase_context *kctx, union kbase_ioctl_cs_queue_
 	u8 max_streams;
 	int ret = -EINVAL;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	group = find_queue_group(kctx, bind->in.group_handle);
 	queue = find_queue(kctx, bind->in.buffer_gpu_addr);
@@ -737,7 +754,7 @@ int kbase_csf_queue_bind(struct kbase_context *kctx, union kbase_ioctl_cs_queue_
 	queue->bind_state = KBASE_CSF_QUEUE_BIND_IN_PROGRESS;
 
 out:
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	return ret;
 }
@@ -792,7 +809,7 @@ static void pending_submission_worker(struct kthread_work *work)
 		return;
 	}
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	/* Iterate through the queue list and schedule the pending ones for submission. */
 	list_for_each_entry(queue, &kctx->csf.queue_list, link) {
@@ -806,7 +823,7 @@ static void pending_submission_worker(struct kthread_work *work)
 		}
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	kbase_reset_gpu_allow(kbdev);
 }
@@ -1387,7 +1404,7 @@ int kbase_csf_queue_group_create(struct kbase_context *const kctx,
 	const u32 fragment_count = hweight64(create->in.fragment_mask);
 	const u32 compute_count = hweight64(create->in.compute_mask);
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	if ((create->in.tiler_max > tiler_count) ||
 	    (create->in.fragment_max > fragment_count) ||
@@ -1423,7 +1440,7 @@ int kbase_csf_queue_group_create(struct kbase_context *const kctx,
 			err = group_handle;
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	return err;
 }
@@ -1586,7 +1603,7 @@ void kbase_csf_queue_group_terminate(struct kbase_context *kctx,
 	else
 		reset_prevented = true;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	group = find_queue_group(kctx, group_handle);
 
@@ -1596,7 +1613,7 @@ void kbase_csf_queue_group_terminate(struct kbase_context *kctx,
 		kctx->csf.queue_groups[group_handle] = NULL;
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 	if (reset_prevented)
 		kbase_reset_gpu_allow(kbdev);
 
@@ -1628,7 +1645,7 @@ int kbase_csf_queue_group_suspend(struct kbase_context *kctx,
 			group_handle);
 		return err;
 	}
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	group = find_queue_group(kctx, group_handle);
 	if (group)
@@ -1637,7 +1654,7 @@ int kbase_csf_queue_group_suspend(struct kbase_context *kctx,
 	else
 		err = -EINVAL;
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 	kbase_reset_gpu_allow(kbdev);
 
 	return err;
@@ -1677,7 +1694,7 @@ void kbase_csf_active_queue_groups_reset(struct kbase_device *kbdev,
 
 	INIT_LIST_HEAD(&evicted_groups);
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	kbase_csf_scheduler_evict_ctx_slots(kbdev, kctx, &evicted_groups);
 	while (!list_empty(&evicted_groups)) {
@@ -1698,7 +1715,7 @@ void kbase_csf_active_queue_groups_reset(struct kbase_device *kbdev,
 			kbase_csf_term_descheduled_queue_group(group);
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 }
 
 int kbase_csf_ctx_init(struct kbase_context *kctx)
@@ -1755,7 +1772,7 @@ int kbase_csf_ctx_init(struct kbase_context *kctx)
 				err = kbase_csf_tiler_heap_context_init(kctx);
 
 				if (likely(!err)) {
-					mutex_init(&kctx->csf.lock);
+					rt_mutex_init(&kctx->csf.lock);
 					kthread_init_work(&kctx->csf.pending_submission_work,
 						  pending_submission_worker);
 				} else
@@ -1806,7 +1823,7 @@ void kbase_csf_ctx_handle_fault(struct kbase_context *kctx,
 		}
 	};
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	for (gr = 0; gr < MAX_QUEUE_GROUP_NUM; gr++) {
 		struct kbase_queue_group *const group =
@@ -1819,7 +1836,7 @@ void kbase_csf_ctx_handle_fault(struct kbase_context *kctx,
 		}
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	if (reported)
 		kbase_event_wakeup_sync(kctx);
@@ -1854,7 +1871,7 @@ void kbase_csf_ctx_term(struct kbase_context *kctx)
 
 	kthread_cancel_work_sync(&kctx->csf.pending_submission_work);
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	/* Iterate through the queue groups that were not terminated by
 	 * userspace and issue the term request to firmware for them.
@@ -1867,7 +1884,7 @@ void kbase_csf_ctx_term(struct kbase_context *kctx)
 			term_queue_group(group);
 		}
 	}
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	if (reset_prevented)
 		kbase_reset_gpu_allow(kbdev);
@@ -1894,7 +1911,7 @@ void kbase_csf_ctx_term(struct kbase_context *kctx)
 	if (as)
 		flush_workqueue(as->pf_wq);
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	for (i = 0; i < MAX_QUEUE_GROUP_NUM; i++) {
 		kfree(kctx->csf.queue_groups[i]);
@@ -1923,7 +1940,7 @@ void kbase_csf_ctx_term(struct kbase_context *kctx)
 		release_queue(queue);
 	}
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 
 	kthread_flush_worker(&kctx->csf.pending_submission_worker);
 	kthread_stop(kctx->csf.pending_sub_worker_thread);
@@ -1933,7 +1950,7 @@ void kbase_csf_ctx_term(struct kbase_context *kctx)
 	kbase_csf_scheduler_context_term(kctx);
 	kbase_csf_event_term(kctx);
 
-	mutex_destroy(&kctx->csf.lock);
+	rt_mutex_destroy(&kctx->csf.lock);
 }
 
 /**
@@ -2146,12 +2163,12 @@ static void oom_event_worker(struct work_struct *data)
 	if (err)
 		return;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	kbase_queue_oom_event(queue);
 	release_queue(queue);
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 	kbase_reset_gpu_allow(kbdev);
 }
 
@@ -2203,12 +2220,12 @@ static void timer_event_worker(struct work_struct *data)
 	else
 		reset_prevented = true;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	term_queue_group(group);
 	report_group_timeout_error(group);
 
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 	if (reset_prevented)
 		kbase_reset_gpu_allow(kctx->kbdev);
 }
@@ -2341,7 +2358,7 @@ static void fatal_event_worker(struct work_struct *const data)
 	else
 		reset_prevented = true;
 
-	mutex_lock(&kctx->csf.lock);
+	rt_mutex_lock(&kctx->csf.lock);
 
 	group = get_bound_queue_group(queue);
 	if (!group) {
@@ -2356,7 +2373,7 @@ static void fatal_event_worker(struct work_struct *const data)
 
 unlock:
 	release_queue(queue);
-	mutex_unlock(&kctx->csf.lock);
+	rt_mutex_unlock(&kctx->csf.lock);
 	if (reset_prevented)
 		kbase_reset_gpu_allow(kbdev);
 }
@@ -2459,6 +2476,8 @@ static void handle_queue_exception_event(struct kbase_queue *const queue,
  * @ginfo:  The CSG interface provided by the firmware.
  * @irqreq: CSG's IRQ request bitmask (one bit per CS).
  * @irqack: CSG's IRQ acknowledge bitmask (one bit per CS).
+ * @track: Pointer that tracks the highest idle CSG and the newly possible viable
+ *         protcted mode requesting group, in current IRQ context.
  *
  * If the interrupt request bitmask differs from the acknowledge bitmask
  * then the firmware is notifying the host of an event concerning those
@@ -2467,8 +2486,9 @@ static void handle_queue_exception_event(struct kbase_queue *const queue,
  * the request and acknowledge registers for the individual CS(s).
  */
 static void process_cs_interrupts(struct kbase_queue_group *const group,
-		      struct kbase_csf_cmd_stream_group_info const *const ginfo,
-		      u32 const irqreq, u32 const irqack)
+				  struct kbase_csf_cmd_stream_group_info const *const ginfo,
+				  u32 const irqreq, u32 const irqack,
+				  struct irq_idle_and_protm_track *track)
 {
 	struct kbase_device *const kbdev = group->kctx->kbdev;
 	u32 remaining = irqreq ^ irqack;
@@ -2552,12 +2572,10 @@ static void process_cs_interrupts(struct kbase_queue_group *const group,
 
 	if (protm_pend) {
 		struct kbase_csf_scheduler *scheduler = &kbdev->csf.scheduler;
-		u32 current_protm_pending_seq =
-			scheduler->tick_protm_pending_seq;
 
-		if (current_protm_pending_seq > group->scan_seq_num) {
+		if (scheduler->tick_protm_pending_seq > group->scan_seq_num) {
 			scheduler->tick_protm_pending_seq = group->scan_seq_num;
-			queue_work(group->kctx->csf.wq, &group->protm_event_work);
+			track->protm_grp = group;
 		}
 
 		if (test_bit(group->csg_nr, scheduler->csg_slots_idle_mask)) {
@@ -2575,6 +2593,8 @@ static void process_cs_interrupts(struct kbase_queue_group *const group,
  *
  * @kbdev: Instance of a GPU platform device that implements a CSF interface.
  * @csg_nr: CSG number.
+ * @track: Pointer that tracks the highest idle CSG and the newly possible viable
+ *         protcted mode requesting group, in current IRQ context.
  *
  * Handles interrupts for a CSG and for CSs within it.
  *
@@ -2585,8 +2605,8 @@ static void process_cs_interrupts(struct kbase_queue_group *const group,
  *
  * See process_cs_interrupts() for details of per-stream interrupt handling.
  */
-static void process_csg_interrupts(struct kbase_device *const kbdev,
-	int const csg_nr)
+static void process_csg_interrupts(struct kbase_device *const kbdev, int const csg_nr,
+				   struct irq_idle_and_protm_track *track)
 {
 	struct kbase_csf_cmd_stream_group_info *ginfo;
 	struct kbase_queue_group *group = NULL;
@@ -2663,20 +2683,11 @@ static void process_csg_interrupts(struct kbase_device *const kbdev,
 			 * a tock for a replacement.
 			 */
 			kthread_mod_delayed_work(&scheduler->csf_worker, &scheduler->tock_work, 0);
-		} else {
-			u32 current_protm_pending_seq =
-				scheduler->tick_protm_pending_seq;
+		}
 
-			if ((current_protm_pending_seq !=
-				KBASEP_TICK_PROTM_PEND_SCAN_SEQ_NR_INVALID) &&
-			    (group->scan_seq_num < current_protm_pending_seq)) {
-				/* If the protm enter was prevented due to groups
-				 * priority, then fire a tock for the scheduler
-				 * to re-examine the case.
-				 */
-				kthread_mod_delayed_work(&scheduler->csf_worker,
-						 &scheduler->tock_work, 0);
-			}
+		if (group->scan_seq_num < track->idle_seq) {
+			track->idle_seq = group->scan_seq_num;
+			track->idle_slot = csg_nr;
 		}
 	}
 
@@ -2694,7 +2705,7 @@ static void process_csg_interrupts(struct kbase_device *const kbdev,
 		handle_progress_timer_event(group);
 	}
 
-	process_cs_interrupts(group, ginfo, irqreq, irqack);
+	process_cs_interrupts(group, ginfo, irqreq, irqack, track);
 
 out:
 	/* group may still be NULL here */
@@ -2859,10 +2870,62 @@ static inline void process_protm_exit(struct kbase_device *kbdev, u32 glb_ack)
 	}
 }
 
+static inline void process_tracked_info_for_protm(struct kbase_device *kbdev,
+						  struct irq_idle_and_protm_track *track)
+{
+	struct kbase_csf_scheduler *scheduler = &kbdev->csf.scheduler;
+	struct kbase_queue_group *group = track->protm_grp;
+	u32 current_protm_pending_seq = scheduler->tick_protm_pending_seq;
+
+	kbase_csf_scheduler_spin_lock_assert_held(kbdev);
+
+	/* Handle protm from the tracked information */
+	if (track->idle_seq < current_protm_pending_seq) {
+		/* If the protm enter was prevented due to groups priority, then fire a tock
+		 * for the scheduler to re-examine the case.
+		*/
+		dev_dbg(kbdev->dev, "Attempt pending protm from idle slot %d\n", track->idle_slot);
+		kthread_mod_delayed_work(&scheduler->csf_worker, &scheduler->tock_work, 0);
+	} else if (group) {
+		u32 i, num_groups = kbdev->csf.global_iface.group_num;
+		struct kbase_queue_group *grp;
+		bool tock_triggered = false;
+
+		/* A new protem request, and track->idle_seq is not sufficient, check across
+		 * previously notified idle CSGs in the current tick/tock cycle.
+		 */
+		for_each_set_bit(i, scheduler->csg_slots_idle_mask, num_groups) {
+			if (i == track->idle_slot)
+				continue;
+			grp = kbase_csf_scheduler_get_group_on_slot(kbdev, i);
+			/* If not NULL then the group pointer cannot disappear as the
+			 * scheduler spinlock is held.
+			 */
+			if (grp == NULL)
+				continue;
+
+			if (grp->scan_seq_num < current_protm_pending_seq) {
+				tock_triggered = true;
+				dev_dbg(kbdev->dev,
+					"Attempt new protm from tick/tock idle slot %d\n", i);
+				kthread_mod_delayed_work(&scheduler->csf_worker, &scheduler->tock_work, 0);
+				break;
+			}
+		}
+
+		if (!tock_triggered) {
+			dev_dbg(kbdev->dev, "Group-%d on slot-%d start protm work\n",
+				group->handle, group->csg_nr);
+			queue_work(group->kctx->csf.wq, &group->protm_event_work);
+		}
+	}
+}
+
 void kbase_csf_interrupt(struct kbase_device *kbdev, u32 val)
 {
 	unsigned long flags;
 	u32 csg_interrupts = val & ~JOB_IRQ_GLOBAL_IF;
+	struct irq_idle_and_protm_track track = { .protm_grp = NULL, .idle_seq = U32_MAX };
 
 	lockdep_assert_held(&kbdev->hwaccess_lock);
 
@@ -2871,12 +2934,16 @@ void kbase_csf_interrupt(struct kbase_device *kbdev, u32 val)
 
 	if (csg_interrupts != 0) {
 		kbase_csf_scheduler_spin_lock(kbdev, &flags);
+		/* Looping through and track the highest idle and protm groups */
 		while (csg_interrupts != 0) {
 			int const csg_nr = ffs(csg_interrupts) - 1;
 
-			process_csg_interrupts(kbdev, csg_nr);
+			process_csg_interrupts(kbdev, csg_nr, &track);
 			csg_interrupts &= ~(1 << csg_nr);
 		}
+
+		/* Handle protm from the tracked information */
+		process_tracked_info_for_protm(kbdev, &track);
 		kbase_csf_scheduler_spin_unlock(kbdev, flags);
 	}
 

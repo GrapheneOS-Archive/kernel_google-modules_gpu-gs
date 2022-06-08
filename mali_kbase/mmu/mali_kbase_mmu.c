@@ -776,7 +776,7 @@ void kbase_mmu_page_fault_worker(struct work_struct *data)
 
 #if MALI_JIT_PRESSURE_LIMIT_BASE
 #if !MALI_USE_CSF
-	mutex_lock(&kctx->jctx.lock);
+	rt_mutex_lock(&kctx->jctx.lock);
 #endif
 #endif
 
@@ -1198,7 +1198,7 @@ fault_done:
 		kbase_gpu_vm_unlock(kctx);
 	}
 #if !MALI_USE_CSF
-	mutex_unlock(&kctx->jctx.lock);
+	rt_mutex_unlock(&kctx->jctx.lock);
 #endif
 #endif
 
@@ -1895,13 +1895,18 @@ kbase_mmu_flush_invalidate_as(struct kbase_device *kbdev, struct kbase_as *as,
 		return;
 	}
 
-	/* There's a chance that we were the second thread to take a PM reference.
-	 * In that case, the owner of the first reference may not have completed the
-	 * L2 power up yet.
-	 * We need to wait for that to complete before proceeding.
+	/*
+	 * Taking a pm reference does not guarantee that the GPU has finished powering up.
+	 * It's possible that the power up has been deferred until after a scheduled power down.
+	 * We must wait here for the L2 to be powered up, and holding a pm reference guarantees that
+	 * it will not be powered down afterwards.
 	 */
-	WARN_ON_ONCE(!kbdev->pm.backend.l2_desired);
-	kbase_pm_wait_for_desired_state(kbdev);
+	err = kbase_pm_wait_for_l2_powered(kbdev);
+	if (err) {
+		dev_err(kbdev->dev, "Wait for L2 power up failed, skipping MMU command");
+		/* Drop the pm ref */
+		goto idle;
+	}
 
 	/* AS transaction begin */
 	mutex_lock(&kbdev->mmu_hw_mutex);
@@ -1942,6 +1947,7 @@ kbase_mmu_flush_invalidate_as(struct kbase_device *kbdev, struct kbase_as *as,
 	mutex_unlock(&kbdev->mmu_hw_mutex);
 	/* AS transaction end */
 
+idle:
 	kbase_pm_context_idle(kbdev);
 }
 
@@ -1972,9 +1978,9 @@ kbase_mmu_flush_invalidate(struct kbase_context *kctx, u64 vpfn, size_t nr,
 
 	kbdev = kctx->kbdev;
 #if !MALI_USE_CSF
-	mutex_lock(&kbdev->js_data.queue_mutex);
+	rt_mutex_lock(&kbdev->js_data.queue_mutex);
 	ctx_is_in_runpool = kbase_ctx_sched_inc_refcount(kctx);
-	mutex_unlock(&kbdev->js_data.queue_mutex);
+	rt_mutex_unlock(&kbdev->js_data.queue_mutex);
 #else
 	ctx_is_in_runpool = kbase_ctx_sched_inc_refcount_if_as_valid(kctx);
 #endif /* !MALI_USE_CSF */

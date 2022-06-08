@@ -55,6 +55,14 @@
 #define CSF_FIRMWARE_ENTRY_ZERO       (1ul << 31)
 
 /**
+ * enum kbase_csf_coredump_reason - Reason for issuing a coredump
+ *
+ * @KBASE_COREDUMP_MMU_HANG: Reason for core dump is an MMU hang
+ */
+enum kbase_csf_coredump_reason {
+	KBASE_COREDUMP_MMU_HANG,
+};
+/**
  * enum kbase_csf_bind_state - bind state of the queue
  *
  * @KBASE_CSF_QUEUE_UNBOUND: Set when the queue is registered or when the link
@@ -744,7 +752,7 @@ struct kbase_csf_context {
 	DECLARE_BITMAP(cookies, KBASE_CSF_NUM_USER_IO_PAGES_HANDLE);
 	struct kbase_queue *user_pages_info[
 		KBASE_CSF_NUM_USER_IO_PAGES_HANDLE];
-	struct mutex lock;
+	struct rt_mutex lock;
 	struct kbase_queue_group *queue_groups[MAX_QUEUE_GROUP_NUM];
 	struct list_head queue_list;
 	struct kbase_csf_kcpu_queue_context kcpu_queues;
@@ -1296,6 +1304,7 @@ struct kbase_csf_hwcnt {
  *                            acknowledgement is pending.
  * @fw_error_work:          Work item for handling the firmware internal error
  *                          fatal event.
+ * @coredump_work:          Work item for initiating a platform core dump.
  * @ipa_control:            IPA Control component manager.
  * @mcu_core_pwroff_dur_us: Sysfs attribute for the glb_pwroff timeout input
  *                          in unit of micro-seconds. The firmware does not use
@@ -1348,6 +1357,7 @@ struct kbase_csf_device {
 	struct work_struct firmware_reload_work;
 	bool glb_init_request_pending;
 	struct work_struct fw_error_work;
+	struct work_struct coredump_work;
 	struct kbase_ipa_control ipa_control;
 	u32 mcu_core_pwroff_dur_us;
 	u32 mcu_core_pwroff_dur_count;
