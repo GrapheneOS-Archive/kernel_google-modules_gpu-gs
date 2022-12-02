@@ -69,7 +69,7 @@ endif
 #
 
 # Driver version string which is returned to userspace via an ioctl
-MALI_RELEASE_NAME ?= '"r40p0-01eac0"'
+MALI_RELEASE_NAME ?= '"r41p0-01eac0"'
 
 # We are building for Pixel
 CONFIG_MALI_PLATFORM_NAME="pixel"

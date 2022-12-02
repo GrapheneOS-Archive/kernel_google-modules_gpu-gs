@@ -677,7 +677,6 @@ struct kbase_process {
  * struct kbase_mem_migrate - Object representing an instance for managing
  *                            page migration.
  *
- * @mapping:          Pointer to address space struct used for page migration.
  * @free_pages_list:  List of deferred pages to free. Mostly used when page migration
  *                    is enabled. Pages in memory pool that require migrating
  *                    will be freed instead. However page cannot be freed
@@ -688,13 +687,17 @@ struct kbase_process {
  * @free_pages_workq: Work queue to process the work items queued to free
  *                    pages in @free_pages_list.
  * @free_pages_work:  Work item to free pages in @free_pages_list.
+ * @inode:            Pointer to inode whose address space operations are used
+ *                    for page migration purposes.
  */
 struct kbase_mem_migrate {
-	struct address_space *mapping;
 	struct list_head free_pages_list;
 	spinlock_t free_pages_lock;
 	struct workqueue_struct *free_pages_workq;
 	struct work_struct free_pages_work;
+#if (KERNEL_VERSION(6, 0, 0) > LINUX_VERSION_CODE)
+	struct inode *inode;
+#endif
 };
 
 /**
@@ -735,6 +738,10 @@ struct kbase_mem_migrate {
  * @opp_table:             Pointer to the device OPP structure maintaining the
  *                         link to OPPs attached to a device. This is obtained
  *                         after setting regulator names for the device.
+ * @token:                 Integer replacement for opp_table in kernel versions
+ *                         6 and greater. Value is a token id number when 0 or greater,
+ *                         and a linux errno when negative. Must be initialised
+ *                         to an non-zero value as 0 is valid token id.
  * @devname:               string containing the name used for GPU device instance,
  *                         miscellaneous device is registered using the same name.
  * @id:                    Unique identifier for the device, indicates the number of
@@ -932,6 +939,10 @@ struct kbase_mem_migrate {
  *                         GPU2019-3878. PM state machine is invoked after
  *                         clearing this flag and @hwaccess_lock is used to
  *                         serialize the access.
+ * @mmu_page_migrate_in_progress: Set before starting a MMU page migration transaction
+ *                         and cleared after the transaction completes. PM L2 state is
+ *                         prevented from entering powering up/down transitions when the
+ *                         flag is set, @hwaccess_lock is used to serialize the access.
  * @poweroff_pending:      Set when power off operation for GPU is started, reset when
  *                         power on for GPU is started.
  * @infinite_cache_active_default: Set to enable using infinite cache for all the
@@ -1025,6 +1036,10 @@ struct kbase_mem_migrate {
  * @oom_notifier_block:     notifier_block containing kernel-registered out-of-
  *                          memory handler.
  * @mem_migrate:            Per device object for managing page migration.
+ * @live_fence_metadata:    Count of live fence metadata structures created by
+ *                          KCPU queue. These structures may outlive kbase module
+ *                          itself. Therefore, in such a case, a warning should be
+ *                          be produced.
  * @proc_sysfs_node:        Sysfs directory node to store per-process stats.
  */
 struct kbase_device {
@@ -1050,9 +1065,11 @@ struct kbase_device {
 #if IS_ENABLED(CONFIG_REGULATOR)
 	struct regulator *regulators[BASE_MAX_NR_CLOCKS_REGULATORS];
 	unsigned int nr_regulators;
-#if (KERNEL_VERSION(4, 10, 0) <= LINUX_VERSION_CODE)
+#if (KERNEL_VERSION(6, 0, 0) <= LINUX_VERSION_CODE)
+	int token;
+#elif (KERNEL_VERSION(4, 10, 0) <= LINUX_VERSION_CODE)
 	struct opp_table *opp_table;
-#endif /* (KERNEL_VERSION(4, 10, 0) <= LINUX_VERSION_CODE */
+#endif /* (KERNEL_VERSION(6, 0, 0) <= LINUX_VERSION_CODE) */
 #endif /* CONFIG_REGULATOR */
 	char devname[DEVNAME_SIZE];
 	u32  id;
@@ -1221,6 +1238,7 @@ struct kbase_device {
 #if MALI_USE_CSF
 	bool mmu_hw_operation_in_progress;
 #endif
+	bool mmu_page_migrate_in_progress;
 	bool poweroff_pending;
 
 	bool infinite_cache_active_default;
@@ -1326,6 +1344,10 @@ struct kbase_device {
 
 
 	struct kbase_mem_migrate mem_migrate;
+
+#if MALI_USE_CSF && IS_ENABLED(CONFIG_SYNC_FILE)
+	atomic_t live_fence_metadata;
+#endif
 	struct kobject *proc_sysfs_node;
 };
 
