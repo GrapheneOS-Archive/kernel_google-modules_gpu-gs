@@ -3422,7 +3422,7 @@ int kbase_check_alloc_sizes(struct kbase_context *kctx, unsigned long flags,
 }
 
 /**
- * Acquire the per-context region list lock
+ * kbase_gpu_vm_lock() - Acquire the per-context region list lock
  * @kctx:  KBase context
  */
 void kbase_gpu_vm_lock(struct kbase_context *kctx)
@@ -3434,7 +3434,7 @@ void kbase_gpu_vm_lock(struct kbase_context *kctx)
 KBASE_EXPORT_TEST_API(kbase_gpu_vm_lock);
 
 /**
- * Release the per-context region list lock
+ * kbase_gpu_vm_unlock() - Release the per-context region list lock
  * @kctx:  KBase context
  */
 void kbase_gpu_vm_unlock(struct kbase_context *kctx)

@@ -128,7 +128,7 @@ static int lock_region(struct kbase_gpu_props const *gpu_props, u64 *lockaddr,
 static int wait_ready(struct kbase_device *kbdev,
 		unsigned int as_nr)
 {
-	unsigned int max_loops = KBASE_AS_INACTIVE_MAX_LOOPS;
+	u32 max_loops = KBASE_AS_INACTIVE_MAX_LOOPS;
 
 	/* Wait for the MMU status to indicate there is no active command. */
 	while (--max_loops &&

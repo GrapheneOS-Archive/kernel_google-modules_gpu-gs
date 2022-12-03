@@ -1338,14 +1338,16 @@ static int kbase_kcpu_fence_signal_process(
 	ret = dma_fence_signal(fence_info->fence);
 
 	if (unlikely(ret < 0)) {
-		dev_warn(kctx->kbdev->dev,
-			"fence_signal() failed with %d\n", ret);
+		dev_warn(kctx->kbdev->dev, "dma_fence(%d) has been signalled already\n", ret);
+		/* Treated as a success */
+		ret = 0;
 	}
 
 	KBASE_KTRACE_ADD_CSF_KCPU(kctx->kbdev, FENCE_SIGNAL, kcpu_queue,
 				  fence_info->fence->context,
 				  fence_info->fence->seqno);
 
+	/* dma_fence refcount needs to be decreased to release it. */
 	dma_fence_put(fence_info->fence);
 	fence_info->fence = NULL;
 
@@ -1396,9 +1398,6 @@ static int kbase_kcpu_fence_signal_prepare(
 	/* create a sync_file fd representing the fence */
 	sync_file = sync_file_create(fence_out);
 	if (!sync_file) {
-#if (KERNEL_VERSION(4, 9, 67) >= LINUX_VERSION_CODE)
-		dma_fence_put(fence_out);
-#endif
 		ret = -ENOMEM;
 		goto file_create_fail;
 	}
@@ -1430,7 +1429,15 @@ static int kbase_kcpu_fence_signal_prepare(
 fd_flags_fail:
 	fput(sync_file->file);
 file_create_fail:
+	/*
+	 * Upon failure, dma_fence refcount that was increased by
+	 * dma_fence_get() or sync_file_create() needs to be decreased
+	 * to release it.
+	 */
 	dma_fence_put(fence_out);
+
+	current_command->info.fence.fence = NULL;
+	kfree(fence_out);
 
 	return ret;
 }
