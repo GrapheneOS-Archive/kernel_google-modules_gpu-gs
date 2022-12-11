@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2018, 2020-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2018, 2020-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -67,9 +67,8 @@ struct kbase_hwcnt_dump_buffer;
  *
  * Return: 0 on success or error code.
  */
-int kbase_hwcnt_accumulator_acquire(
-	struct kbase_hwcnt_context *hctx,
-	struct kbase_hwcnt_accumulator **accum);
+int kbase_hwcnt_accumulator_acquire(struct kbase_hwcnt_context *hctx,
+				    struct kbase_hwcnt_accumulator **accum);
 
 /**
  * kbase_hwcnt_accumulator_release() - Release a hardware counter accumulator.
@@ -102,12 +101,10 @@ void kbase_hwcnt_accumulator_release(struct kbase_hwcnt_accumulator *accum);
  *
  * Return: 0 on success or error code.
  */
-int kbase_hwcnt_accumulator_set_counters(
-	struct kbase_hwcnt_accumulator *accum,
-	const struct kbase_hwcnt_enable_map *new_map,
-	u64 *ts_start_ns,
-	u64 *ts_end_ns,
-	struct kbase_hwcnt_dump_buffer *dump_buf);
+int kbase_hwcnt_accumulator_set_counters(struct kbase_hwcnt_accumulator *accum,
+					 const struct kbase_hwcnt_enable_map *new_map,
+					 u64 *ts_start_ns, u64 *ts_end_ns,
+					 struct kbase_hwcnt_dump_buffer *dump_buf);
 
 /**
  * kbase_hwcnt_accumulator_dump() - Perform a dump of the currently enabled
@@ -127,11 +124,8 @@ int kbase_hwcnt_accumulator_set_counters(
  *
  * Return: 0 on success or error code.
  */
-int kbase_hwcnt_accumulator_dump(
-	struct kbase_hwcnt_accumulator *accum,
-	u64 *ts_start_ns,
-	u64 *ts_end_ns,
-	struct kbase_hwcnt_dump_buffer *dump_buf);
+int kbase_hwcnt_accumulator_dump(struct kbase_hwcnt_accumulator *accum, u64 *ts_start_ns,
+				 u64 *ts_end_ns, struct kbase_hwcnt_dump_buffer *dump_buf);
 
 /**
  * kbase_hwcnt_accumulator_timestamp_ns() - Get the current accumulator backend

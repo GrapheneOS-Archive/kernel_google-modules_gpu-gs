@@ -23,8 +23,8 @@
  * DOC: Header file for the size of the buffer to accumulate the histogram report text in
  */
 
-#ifndef _KBASE_MEM_PROFILE_DEBUGFS_BUF_SIZE_H_
-#define _KBASE_MEM_PROFILE_DEBUGFS_BUF_SIZE_H_
+#ifndef _UAPI_KBASE_MEM_PROFILE_DEBUGFS_BUF_SIZE_H_
+#define _UAPI_KBASE_MEM_PROFILE_DEBUGFS_BUF_SIZE_H_
 
 /**
  * KBASE_MEM_PROFILE_MAX_BUF_SIZE - The size of the buffer to accumulate the histogram report text
@@ -32,5 +32,4 @@
  */
 #define KBASE_MEM_PROFILE_MAX_BUF_SIZE ((size_t)(64 + ((80 + (56 * 64)) * 54) + 56))
 
-#endif  /*_KBASE_MEM_PROFILE_DEBUGFS_BUF_SIZE_H_*/
-
+#endif /*_UAPI_KBASE_MEM_PROFILE_DEBUGFS_BUF_SIZE_H_*/

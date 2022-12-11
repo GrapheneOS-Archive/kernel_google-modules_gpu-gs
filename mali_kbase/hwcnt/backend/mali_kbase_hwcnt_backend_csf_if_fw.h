@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2021-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -26,7 +26,7 @@
 #ifndef _KBASE_HWCNT_BACKEND_CSF_IF_FW_H_
 #define _KBASE_HWCNT_BACKEND_CSF_IF_FW_H_
 
-#include "mali_kbase_hwcnt_backend_csf_if.h"
+#include "hwcnt/backend/mali_kbase_hwcnt_backend_csf_if.h"
 
 /**
  * kbase_hwcnt_backend_csf_if_fw_create() - Create a firmware CSF interface
@@ -36,15 +36,14 @@
  *         creation success.
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_backend_csf_if_fw_create(
-	struct kbase_device *kbdev, struct kbase_hwcnt_backend_csf_if *if_fw);
+int kbase_hwcnt_backend_csf_if_fw_create(struct kbase_device *kbdev,
+					 struct kbase_hwcnt_backend_csf_if *if_fw);
 
 /**
  * kbase_hwcnt_backend_csf_if_fw_destroy() - Destroy a firmware CSF interface of
  *                                           hardware counter backend.
  * @if_fw: Pointer to a CSF interface to destroy.
  */
-void kbase_hwcnt_backend_csf_if_fw_destroy(
-	struct kbase_hwcnt_backend_csf_if *if_fw);
+void kbase_hwcnt_backend_csf_if_fw_destroy(struct kbase_hwcnt_backend_csf_if *if_fw);
 
 #endif /* _KBASE_HWCNT_BACKEND_CSF_IF_FW_H_ */

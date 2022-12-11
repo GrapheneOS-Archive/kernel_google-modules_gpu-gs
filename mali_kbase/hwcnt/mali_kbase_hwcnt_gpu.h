@@ -34,9 +34,8 @@ struct kbase_hwcnt_dump_buffer;
 #define KBASE_HWCNT_V5_BLOCK_TYPE_COUNT 4
 #define KBASE_HWCNT_V5_HEADERS_PER_BLOCK 4
 #define KBASE_HWCNT_V5_DEFAULT_COUNTERS_PER_BLOCK 60
-#define KBASE_HWCNT_V5_DEFAULT_VALUES_PER_BLOCK                                \
-	(KBASE_HWCNT_V5_HEADERS_PER_BLOCK +                                    \
-	 KBASE_HWCNT_V5_DEFAULT_COUNTERS_PER_BLOCK)
+#define KBASE_HWCNT_V5_DEFAULT_VALUES_PER_BLOCK                                                    \
+	(KBASE_HWCNT_V5_HEADERS_PER_BLOCK + KBASE_HWCNT_V5_DEFAULT_COUNTERS_PER_BLOCK)
 
 /* FrontEnd block count in V5 GPU hardware counter. */
 #define KBASE_HWCNT_V5_FE_BLOCK_COUNT 1
@@ -228,19 +227,17 @@ static inline bool kbase_hwcnt_is_block_type_undefined(const uint64_t grp_type,
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_jm_metadata_create(
-	const struct kbase_hwcnt_gpu_info *info,
-	enum kbase_hwcnt_set counter_set,
-	const struct kbase_hwcnt_metadata **out_metadata,
-	size_t *out_dump_bytes);
+int kbase_hwcnt_jm_metadata_create(const struct kbase_hwcnt_gpu_info *info,
+				   enum kbase_hwcnt_set counter_set,
+				   const struct kbase_hwcnt_metadata **out_metadata,
+				   size_t *out_dump_bytes);
 
 /**
  * kbase_hwcnt_jm_metadata_destroy() - Destroy JM GPU hardware counter metadata.
  *
  * @metadata: Pointer to metadata to destroy.
  */
-void kbase_hwcnt_jm_metadata_destroy(
-	const struct kbase_hwcnt_metadata *metadata);
+void kbase_hwcnt_jm_metadata_destroy(const struct kbase_hwcnt_metadata *metadata);
 
 /**
  * kbase_hwcnt_csf_metadata_create() - Create hardware counter metadata for the
@@ -252,18 +249,16 @@ void kbase_hwcnt_jm_metadata_destroy(
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_csf_metadata_create(
-	const struct kbase_hwcnt_gpu_info *info,
-	enum kbase_hwcnt_set counter_set,
-	const struct kbase_hwcnt_metadata **out_metadata);
+int kbase_hwcnt_csf_metadata_create(const struct kbase_hwcnt_gpu_info *info,
+				    enum kbase_hwcnt_set counter_set,
+				    const struct kbase_hwcnt_metadata **out_metadata);
 
 /**
  * kbase_hwcnt_csf_metadata_destroy() - Destroy CSF GPU hardware counter
  *                                      metadata.
  * @metadata: Pointer to metadata to destroy.
  */
-void kbase_hwcnt_csf_metadata_destroy(
-	const struct kbase_hwcnt_metadata *metadata);
+void kbase_hwcnt_csf_metadata_destroy(const struct kbase_hwcnt_metadata *metadata);
 
 /**
  * kbase_hwcnt_jm_dump_get() - Copy or accumulate enabled counters from the raw
@@ -289,8 +284,7 @@ void kbase_hwcnt_csf_metadata_destroy(
 int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 			    const struct kbase_hwcnt_enable_map *dst_enable_map,
 			    const u64 pm_core_mask,
-			    const struct kbase_hwcnt_curr_config *curr_config,
-			    bool accumulate);
+			    const struct kbase_hwcnt_curr_config *curr_config, bool accumulate);
 
 /**
  * kbase_hwcnt_csf_dump_get() - Copy or accumulate enabled counters from the raw
@@ -310,8 +304,7 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
  * Return: 0 on success, else error code.
  */
 int kbase_hwcnt_csf_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
-			     const struct kbase_hwcnt_enable_map *dst_enable_map,
-			     bool accumulate);
+			     const struct kbase_hwcnt_enable_map *dst_enable_map, bool accumulate);
 
 /**
  * kbase_hwcnt_backend_gpu_block_map_to_physical() - Convert from a block
@@ -365,9 +358,8 @@ static inline u32 kbase_hwcnt_backend_gpu_block_map_to_physical(u64 lo, u64 hi)
  * individual counter block value, but the physical enable map uses 1 bit for
  * every 4 counters, shared over all instances of a block.
  */
-void kbase_hwcnt_gpu_enable_map_to_physical(
-	struct kbase_hwcnt_physical_enable_map *dst,
-	const struct kbase_hwcnt_enable_map *src);
+void kbase_hwcnt_gpu_enable_map_to_physical(struct kbase_hwcnt_physical_enable_map *dst,
+					    const struct kbase_hwcnt_enable_map *src);
 
 /**
  * kbase_hwcnt_gpu_set_to_physical() - Map counter set selection to physical
@@ -376,8 +368,7 @@ void kbase_hwcnt_gpu_enable_map_to_physical(
  * @dst: Non-NULL pointer to destination physical SET_SELECT value.
  * @src: Non-NULL pointer to source counter set selection.
  */
-void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst,
-				     enum kbase_hwcnt_set src);
+void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst, enum kbase_hwcnt_set src);
 
 /**
  * kbase_hwcnt_gpu_enable_map_from_physical() - Convert a physical enable map to
@@ -393,9 +384,8 @@ void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst,
  * more than 64, so the enable map abstraction has nowhere to store the enable
  * information for the 64 non-existent counters.
  */
-void kbase_hwcnt_gpu_enable_map_from_physical(
-	struct kbase_hwcnt_enable_map *dst,
-	const struct kbase_hwcnt_physical_enable_map *src);
+void kbase_hwcnt_gpu_enable_map_from_physical(struct kbase_hwcnt_enable_map *dst,
+					      const struct kbase_hwcnt_physical_enable_map *src);
 
 /**
  * kbase_hwcnt_gpu_patch_dump_headers() - Patch all the performance counter
@@ -411,8 +401,7 @@ void kbase_hwcnt_gpu_enable_map_from_physical(
  * kernel-user boundary, to ensure the header is accurate for the enable map
  * used by the user.
  */
-void kbase_hwcnt_gpu_patch_dump_headers(
-	struct kbase_hwcnt_dump_buffer *buf,
-	const struct kbase_hwcnt_enable_map *enable_map);
+void kbase_hwcnt_gpu_patch_dump_headers(struct kbase_hwcnt_dump_buffer *buf,
+					const struct kbase_hwcnt_enable_map *enable_map);
 
 #endif /* _KBASE_HWCNT_GPU_H_ */

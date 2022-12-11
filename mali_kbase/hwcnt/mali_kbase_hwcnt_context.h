@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2018, 2020-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2018, 2020-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -43,9 +43,8 @@ struct kbase_hwcnt_context;
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_context_init(
-	const struct kbase_hwcnt_backend_interface *iface,
-	struct kbase_hwcnt_context **out_hctx);
+int kbase_hwcnt_context_init(const struct kbase_hwcnt_backend_interface *iface,
+			     struct kbase_hwcnt_context **out_hctx);
 
 /**
  * kbase_hwcnt_context_term() - Terminate a hardware counter context.
@@ -61,8 +60,7 @@ void kbase_hwcnt_context_term(struct kbase_hwcnt_context *hctx);
  *
  * Return: Non-NULL pointer to metadata, or NULL on error.
  */
-const struct kbase_hwcnt_metadata *kbase_hwcnt_context_metadata(
-	struct kbase_hwcnt_context *hctx);
+const struct kbase_hwcnt_metadata *kbase_hwcnt_context_metadata(struct kbase_hwcnt_context *hctx);
 
 /**
  * kbase_hwcnt_context_disable() - Increment the disable count of the context.
@@ -145,7 +143,6 @@ void kbase_hwcnt_context_enable(struct kbase_hwcnt_context *hctx);
  * this meant progress through the power management states could be stalled
  * for however long that higher priority thread took.
  */
-bool kbase_hwcnt_context_queue_work(struct kbase_hwcnt_context *hctx,
-				    struct work_struct *work);
+bool kbase_hwcnt_context_queue_work(struct kbase_hwcnt_context *hctx, struct work_struct *work);
 
 #endif /* _KBASE_HWCNT_CONTEXT_H_ */

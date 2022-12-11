@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2021-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -35,8 +35,7 @@ struct kbase_hwcnt_watchdog_interface;
  *
  * Return: 0 on success, error otherwise.
  */
-int kbase_hwcnt_watchdog_if_timer_create(
-	struct kbase_hwcnt_watchdog_interface *watchdog_if);
+int kbase_hwcnt_watchdog_if_timer_create(struct kbase_hwcnt_watchdog_interface *watchdog_if);
 
 /**
  * kbase_hwcnt_watchdog_if_timer_destroy() - Destroy a watchdog interface of hardware counter
@@ -44,7 +43,6 @@ int kbase_hwcnt_watchdog_if_timer_create(
  *
  * @watchdog_if: Pointer to watchdog interface to destroy
  */
-void kbase_hwcnt_watchdog_if_timer_destroy(
-	struct kbase_hwcnt_watchdog_interface *watchdog_if);
+void kbase_hwcnt_watchdog_if_timer_destroy(struct kbase_hwcnt_watchdog_interface *watchdog_if);
 
 #endif /* _KBASE_HWCNT_WATCHDOG_IF_TIMER_H_ */

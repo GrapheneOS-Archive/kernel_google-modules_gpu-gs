@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2021-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -22,7 +22,7 @@
 #ifndef _KBASE_HWCNT_GPU_NARROW_H_
 #define _KBASE_HWCNT_GPU_NARROW_H_
 
-#include "mali_kbase_hwcnt_types.h"
+#include "hwcnt/mali_kbase_hwcnt_types.h"
 #include <linux/types.h>
 
 struct kbase_device;
@@ -86,8 +86,8 @@ struct kbase_hwcnt_dump_buffer_narrow_array {
  *
  * Return: Number of hardware counter groups described by narrow metadata.
  */
-static inline size_t kbase_hwcnt_metadata_narrow_group_count(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow)
+static inline size_t
+kbase_hwcnt_metadata_narrow_group_count(const struct kbase_hwcnt_metadata_narrow *md_narrow)
 {
 	return kbase_hwcnt_metadata_group_count(md_narrow->metadata);
 }
@@ -100,8 +100,9 @@ static inline size_t kbase_hwcnt_metadata_narrow_group_count(
  *
  * Return: Type of the group grp.
  */
-static inline u64 kbase_hwcnt_metadata_narrow_group_type(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp)
+static inline u64
+kbase_hwcnt_metadata_narrow_group_type(const struct kbase_hwcnt_metadata_narrow *md_narrow,
+				       size_t grp)
 {
 	return kbase_hwcnt_metadata_group_type(md_narrow->metadata, grp);
 }
@@ -114,8 +115,9 @@ static inline u64 kbase_hwcnt_metadata_narrow_group_type(
  *
  * Return: Number of blocks in group grp.
  */
-static inline size_t kbase_hwcnt_metadata_narrow_block_count(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp)
+static inline size_t
+kbase_hwcnt_metadata_narrow_block_count(const struct kbase_hwcnt_metadata_narrow *md_narrow,
+					size_t grp)
 {
 	return kbase_hwcnt_metadata_block_count(md_narrow->metadata, grp);
 }
@@ -131,11 +133,9 @@ static inline size_t kbase_hwcnt_metadata_narrow_block_count(
  * Return: Number of instances of block blk in group grp.
  */
 static inline size_t kbase_hwcnt_metadata_narrow_block_instance_count(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp,
-	size_t blk)
+	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp, size_t blk)
 {
-	return kbase_hwcnt_metadata_block_instance_count(md_narrow->metadata,
-							 grp, blk);
+	return kbase_hwcnt_metadata_block_instance_count(md_narrow->metadata, grp, blk);
 }
 
 /**
@@ -148,12 +148,11 @@ static inline size_t kbase_hwcnt_metadata_narrow_block_instance_count(
  *
  * Return: Number of counter headers in each instance of block blk in group grp.
  */
-static inline size_t kbase_hwcnt_metadata_narrow_block_headers_count(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp,
-	size_t blk)
+static inline size_t
+kbase_hwcnt_metadata_narrow_block_headers_count(const struct kbase_hwcnt_metadata_narrow *md_narrow,
+						size_t grp, size_t blk)
 {
-	return kbase_hwcnt_metadata_block_headers_count(md_narrow->metadata,
-							grp, blk);
+	return kbase_hwcnt_metadata_block_headers_count(md_narrow->metadata, grp, blk);
 }
 
 /**
@@ -167,11 +166,9 @@ static inline size_t kbase_hwcnt_metadata_narrow_block_headers_count(
  * Return: Number of counters in each instance of block blk in group grp.
  */
 static inline size_t kbase_hwcnt_metadata_narrow_block_counters_count(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp,
-	size_t blk)
+	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp, size_t blk)
 {
-	return kbase_hwcnt_metadata_block_counters_count(md_narrow->metadata,
-							 grp, blk);
+	return kbase_hwcnt_metadata_block_counters_count(md_narrow->metadata, grp, blk);
 }
 
 /**
@@ -184,14 +181,12 @@ static inline size_t kbase_hwcnt_metadata_narrow_block_counters_count(
  * Return: Number of headers plus counters in each instance of block blk
  *         in group grp.
  */
-static inline size_t kbase_hwcnt_metadata_narrow_block_values_count(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow, size_t grp,
-	size_t blk)
+static inline size_t
+kbase_hwcnt_metadata_narrow_block_values_count(const struct kbase_hwcnt_metadata_narrow *md_narrow,
+					       size_t grp, size_t blk)
 {
-	return kbase_hwcnt_metadata_narrow_block_counters_count(md_narrow, grp,
-								blk) +
-	       kbase_hwcnt_metadata_narrow_block_headers_count(md_narrow, grp,
-							       blk);
+	return kbase_hwcnt_metadata_narrow_block_counters_count(md_narrow, grp, blk) +
+	       kbase_hwcnt_metadata_narrow_block_headers_count(md_narrow, grp, blk);
 }
 
 /**
@@ -205,18 +200,13 @@ static inline size_t kbase_hwcnt_metadata_narrow_block_values_count(
  *
  * Return: u32* to the dump buffer for the block instance.
  */
-static inline u32 *kbase_hwcnt_dump_buffer_narrow_block_instance(
-	const struct kbase_hwcnt_dump_buffer_narrow *buf, size_t grp,
-	size_t blk, size_t blk_inst)
+static inline u32 *
+kbase_hwcnt_dump_buffer_narrow_block_instance(const struct kbase_hwcnt_dump_buffer_narrow *buf,
+					      size_t grp, size_t blk, size_t blk_inst)
 {
-	return buf->dump_buf +
-	       buf->md_narrow->metadata->grp_metadata[grp].dump_buf_index +
-	       buf->md_narrow->metadata->grp_metadata[grp]
-		       .blk_metadata[blk]
-		       .dump_buf_index +
-	       (buf->md_narrow->metadata->grp_metadata[grp]
-			.blk_metadata[blk]
-			.dump_buf_stride *
+	return buf->dump_buf + buf->md_narrow->metadata->grp_metadata[grp].dump_buf_index +
+	       buf->md_narrow->metadata->grp_metadata[grp].blk_metadata[blk].dump_buf_index +
+	       (buf->md_narrow->metadata->grp_metadata[grp].blk_metadata[blk].dump_buf_stride *
 		blk_inst);
 }
 
@@ -239,17 +229,15 @@ static inline u32 *kbase_hwcnt_dump_buffer_narrow_block_instance(
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_gpu_metadata_narrow_create(
-	const struct kbase_hwcnt_metadata_narrow **dst_md_narrow,
-	const struct kbase_hwcnt_metadata *src_md);
+int kbase_hwcnt_gpu_metadata_narrow_create(const struct kbase_hwcnt_metadata_narrow **dst_md_narrow,
+					   const struct kbase_hwcnt_metadata *src_md);
 
 /**
  * kbase_hwcnt_gpu_metadata_narrow_destroy() - Destroy a hardware counter narrow
  *                                             metadata object.
  * @md_narrow: Pointer to hardware counter narrow metadata.
  */
-void kbase_hwcnt_gpu_metadata_narrow_destroy(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow);
+void kbase_hwcnt_gpu_metadata_narrow_destroy(const struct kbase_hwcnt_metadata_narrow *md_narrow);
 
 /**
  * kbase_hwcnt_dump_buffer_narrow_alloc() - Allocate a narrow dump buffer.
@@ -260,9 +248,8 @@ void kbase_hwcnt_gpu_metadata_narrow_destroy(
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_dump_buffer_narrow_alloc(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow,
-	struct kbase_hwcnt_dump_buffer_narrow *dump_buf);
+int kbase_hwcnt_dump_buffer_narrow_alloc(const struct kbase_hwcnt_metadata_narrow *md_narrow,
+					 struct kbase_hwcnt_dump_buffer_narrow *dump_buf);
 
 /**
  * kbase_hwcnt_dump_buffer_narrow_free() - Free a narrow dump buffer.
@@ -271,8 +258,7 @@ int kbase_hwcnt_dump_buffer_narrow_alloc(
  * Can be safely called on an all-zeroed narrow dump buffer structure, or on an
  * already freed narrow dump buffer.
  */
-void kbase_hwcnt_dump_buffer_narrow_free(
-	struct kbase_hwcnt_dump_buffer_narrow *dump_buf);
+void kbase_hwcnt_dump_buffer_narrow_free(struct kbase_hwcnt_dump_buffer_narrow *dump_buf);
 
 /**
  * kbase_hwcnt_dump_buffer_narrow_array_alloc() - Allocate an array of narrow
@@ -320,10 +306,8 @@ void kbase_hwcnt_dump_buffer_narrow_array_free(
  * source value is bigger than U32_MAX, or copy the value from source if the
  * corresponding source value is less than or equal to U32_MAX.
  */
-void kbase_hwcnt_dump_buffer_block_copy_strict_narrow(u32 *dst_blk,
-						      const u64 *src_blk,
-						      const u64 *blk_em,
-						      size_t val_cnt);
+void kbase_hwcnt_dump_buffer_block_copy_strict_narrow(u32 *dst_blk, const u64 *src_blk,
+						      const u64 *blk_em, size_t val_cnt);
 
 /**
  * kbase_hwcnt_dump_buffer_copy_strict_narrow() - Copy all enabled values to a
@@ -339,9 +323,8 @@ void kbase_hwcnt_dump_buffer_block_copy_strict_narrow(u32 *dst_blk,
  * corresponding source value is bigger than U32_MAX, or copy the value from
  * source if the corresponding source value is less than or equal to U32_MAX.
  */
-void kbase_hwcnt_dump_buffer_copy_strict_narrow(
-	struct kbase_hwcnt_dump_buffer_narrow *dst_narrow,
-	const struct kbase_hwcnt_dump_buffer *src,
-	const struct kbase_hwcnt_enable_map *dst_enable_map);
+void kbase_hwcnt_dump_buffer_copy_strict_narrow(struct kbase_hwcnt_dump_buffer_narrow *dst_narrow,
+						const struct kbase_hwcnt_dump_buffer *src,
+						const struct kbase_hwcnt_enable_map *dst_enable_map);
 
 #endif /* _KBASE_HWCNT_GPU_NARROW_H_ */

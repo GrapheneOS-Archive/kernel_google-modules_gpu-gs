@@ -19,9 +19,9 @@
  *
  */
 
-#include "mali_kbase_hwcnt_backend_jm.h"
-#include "mali_kbase_hwcnt_gpu.h"
-#include "mali_kbase_hwcnt_types.h"
+#include "hwcnt/backend/mali_kbase_hwcnt_backend_jm.h"
+#include "hwcnt/mali_kbase_hwcnt_gpu.h"
+#include "hwcnt/mali_kbase_hwcnt_types.h"
 #include "mali_kbase.h"
 #include "backend/gpu/mali_kbase_pm_ca.h"
 #include "mali_kbase_hwaccess_instr.h"
@@ -136,9 +136,8 @@ struct kbase_hwcnt_backend_jm {
  *
  * Return: 0 on success, else error code.
  */
-static int
-kbasep_hwcnt_backend_jm_gpu_info_init(struct kbase_device *kbdev,
-				      struct kbase_hwcnt_gpu_info *info)
+static int kbasep_hwcnt_backend_jm_gpu_info_init(struct kbase_device *kbdev,
+						 struct kbase_hwcnt_gpu_info *info)
 {
 	size_t clk;
 
@@ -153,13 +152,11 @@ kbasep_hwcnt_backend_jm_gpu_info_init(struct kbase_device *kbdev,
 	{
 		const struct base_gpu_props *props = &kbdev->gpu_props.props;
 		const size_t l2_count = props->l2_props.num_l2_slices;
-		const size_t core_mask =
-			props->coherency_info.group[0].core_mask;
+		const size_t core_mask = props->coherency_info.group[0].core_mask;
 
 		info->l2_count = l2_count;
 		info->core_mask = core_mask;
-		info->prfcnt_values_per_block =
-			KBASE_HWCNT_V5_DEFAULT_VALUES_PER_BLOCK;
+		info->prfcnt_values_per_block = KBASE_HWCNT_V5_DEFAULT_VALUES_PER_BLOCK;
 	}
 #endif /* CONFIG_MALI_NO_MALI */
 
@@ -173,9 +170,8 @@ kbasep_hwcnt_backend_jm_gpu_info_init(struct kbase_device *kbdev,
 	return 0;
 }
 
-static void kbasep_hwcnt_backend_jm_init_layout(
-	const struct kbase_hwcnt_gpu_info *gpu_info,
-	struct kbase_hwcnt_jm_physical_layout *phys_layout)
+static void kbasep_hwcnt_backend_jm_init_layout(const struct kbase_hwcnt_gpu_info *gpu_info,
+						struct kbase_hwcnt_jm_physical_layout *phys_layout)
 {
 	u8 shader_core_cnt;
 
@@ -189,32 +185,29 @@ static void kbasep_hwcnt_backend_jm_init_layout(
 		.tiler_cnt = KBASE_HWCNT_V5_TILER_BLOCK_COUNT,
 		.mmu_l2_cnt = gpu_info->l2_count,
 		.shader_cnt = shader_core_cnt,
-		.block_cnt = KBASE_HWCNT_V5_FE_BLOCK_COUNT +
-			     KBASE_HWCNT_V5_TILER_BLOCK_COUNT +
+		.block_cnt = KBASE_HWCNT_V5_FE_BLOCK_COUNT + KBASE_HWCNT_V5_TILER_BLOCK_COUNT +
 			     gpu_info->l2_count + shader_core_cnt,
 		.shader_avail_mask = gpu_info->core_mask,
 		.headers_per_block = KBASE_HWCNT_V5_HEADERS_PER_BLOCK,
 		.values_per_block = gpu_info->prfcnt_values_per_block,
-		.counters_per_block = gpu_info->prfcnt_values_per_block -
-				      KBASE_HWCNT_V5_HEADERS_PER_BLOCK,
+		.counters_per_block =
+			gpu_info->prfcnt_values_per_block - KBASE_HWCNT_V5_HEADERS_PER_BLOCK,
 		.enable_mask_offset = KBASE_HWCNT_V5_PRFCNT_EN_HEADER,
 	};
 }
 
-static void kbasep_hwcnt_backend_jm_dump_sample(
-	const struct kbase_hwcnt_backend_jm *const backend_jm)
+static void
+kbasep_hwcnt_backend_jm_dump_sample(const struct kbase_hwcnt_backend_jm *const backend_jm)
 {
 	size_t block_idx;
 	const u32 *new_sample_buf = backend_jm->cpu_dump_va;
 	const u32 *new_block = new_sample_buf;
 	u64 *dst_buf = backend_jm->to_user_buf;
 	u64 *dst_block = dst_buf;
-	const size_t values_per_block =
-		backend_jm->phys_layout.values_per_block;
+	const size_t values_per_block = backend_jm->phys_layout.values_per_block;
 	const size_t dump_bytes = backend_jm->info->dump_bytes;
 
-	for (block_idx = 0; block_idx < backend_jm->phys_layout.block_cnt;
-	     block_idx++) {
+	for (block_idx = 0; block_idx < backend_jm->phys_layout.block_cnt; block_idx++) {
 		size_t ctr_idx;
 
 		for (ctr_idx = 0; ctr_idx < values_per_block; ctr_idx++)
@@ -224,10 +217,8 @@ static void kbasep_hwcnt_backend_jm_dump_sample(
 		dst_block += values_per_block;
 	}
 
-	WARN_ON(new_block !=
-		new_sample_buf + (dump_bytes / KBASE_HWCNT_VALUE_HW_BYTES));
-	WARN_ON(dst_block !=
-		dst_buf + (dump_bytes / KBASE_HWCNT_VALUE_HW_BYTES));
+	WARN_ON(new_block != new_sample_buf + (dump_bytes / KBASE_HWCNT_VALUE_HW_BYTES));
+	WARN_ON(dst_block != dst_buf + (dump_bytes / KBASE_HWCNT_VALUE_HW_BYTES));
 }
 
 /**
@@ -237,21 +228,18 @@ static void kbasep_hwcnt_backend_jm_dump_sample(
  * @clk_index:        Clock index
  * @clk_rate_hz:      Clock frequency(hz)
  */
-static void kbasep_hwcnt_backend_jm_on_freq_change(
-	struct kbase_clk_rate_listener *rate_listener,
-	u32 clk_index,
-	u32 clk_rate_hz)
+static void kbasep_hwcnt_backend_jm_on_freq_change(struct kbase_clk_rate_listener *rate_listener,
+						   u32 clk_index, u32 clk_rate_hz)
 {
-	struct kbase_hwcnt_backend_jm *backend_jm = container_of(
-		rate_listener, struct kbase_hwcnt_backend_jm, rate_listener);
+	struct kbase_hwcnt_backend_jm *backend_jm =
+		container_of(rate_listener, struct kbase_hwcnt_backend_jm, rate_listener);
 	u64 timestamp_ns;
 
 	if (clk_index != KBASE_CLOCK_DOMAIN_SHADER_CORES)
 		return;
 
 	timestamp_ns = ktime_get_raw_ns();
-	kbase_ccswe_freq_change(
-		&backend_jm->ccswe_shader_cores, timestamp_ns, clk_rate_hz);
+	kbase_ccswe_freq_change(&backend_jm->ccswe_shader_cores, timestamp_ns, clk_rate_hz);
 }
 
 /**
@@ -261,53 +249,42 @@ static void kbasep_hwcnt_backend_jm_on_freq_change(
  * @enable_map:   Non-NULL pointer to enable map specifying enabled counters.
  * @timestamp_ns: Timestamp(ns) when HWCNT were enabled.
  */
-static void kbasep_hwcnt_backend_jm_cc_enable(
-	struct kbase_hwcnt_backend_jm *backend_jm,
-	const struct kbase_hwcnt_enable_map *enable_map,
-	u64 timestamp_ns)
+static void kbasep_hwcnt_backend_jm_cc_enable(struct kbase_hwcnt_backend_jm *backend_jm,
+					      const struct kbase_hwcnt_enable_map *enable_map,
+					      u64 timestamp_ns)
 {
 	struct kbase_device *kbdev = backend_jm->kctx->kbdev;
 	u64 clk_enable_map = enable_map->clk_enable_map;
 	u64 cycle_count;
 
-	if (kbase_hwcnt_clk_enable_map_enabled(
-		    clk_enable_map, KBASE_CLOCK_DOMAIN_TOP)) {
+	if (kbase_hwcnt_clk_enable_map_enabled(clk_enable_map, KBASE_CLOCK_DOMAIN_TOP)) {
 		/* turn on the cycle counter */
 		kbase_pm_request_gpu_cycle_counter_l2_is_on(kbdev);
 		/* Read cycle count for top clock domain. */
-		kbase_backend_get_gpu_time_norequest(
-			kbdev, &cycle_count, NULL, NULL);
+		kbase_backend_get_gpu_time_norequest(kbdev, &cycle_count, NULL, NULL);
 
-		backend_jm->prev_cycle_count[KBASE_CLOCK_DOMAIN_TOP] =
-			cycle_count;
+		backend_jm->prev_cycle_count[KBASE_CLOCK_DOMAIN_TOP] = cycle_count;
 	}
 
-	if (kbase_hwcnt_clk_enable_map_enabled(
-		    clk_enable_map, KBASE_CLOCK_DOMAIN_SHADER_CORES)) {
+	if (kbase_hwcnt_clk_enable_map_enabled(clk_enable_map, KBASE_CLOCK_DOMAIN_SHADER_CORES)) {
 		/* software estimation for non-top clock domains */
 		struct kbase_clk_rate_trace_manager *rtm = &kbdev->pm.clk_rtm;
-		const struct kbase_clk_data *clk_data =
-			rtm->clks[KBASE_CLOCK_DOMAIN_SHADER_CORES];
+		const struct kbase_clk_data *clk_data = rtm->clks[KBASE_CLOCK_DOMAIN_SHADER_CORES];
 		u32 cur_freq;
 		unsigned long flags;
 
 		spin_lock_irqsave(&rtm->lock, flags);
 
-		cur_freq = (u32) clk_data->clock_val;
+		cur_freq = (u32)clk_data->clock_val;
 		kbase_ccswe_reset(&backend_jm->ccswe_shader_cores);
-		kbase_ccswe_freq_change(
-			&backend_jm->ccswe_shader_cores,
-			timestamp_ns,
-			cur_freq);
+		kbase_ccswe_freq_change(&backend_jm->ccswe_shader_cores, timestamp_ns, cur_freq);
 
-		kbase_clk_rate_trace_manager_subscribe_no_lock(
-			rtm, &backend_jm->rate_listener);
+		kbase_clk_rate_trace_manager_subscribe_no_lock(rtm, &backend_jm->rate_listener);
 
 		spin_unlock_irqrestore(&rtm->lock, flags);
 
 		/* ccswe was reset. The estimated cycle is zero. */
-		backend_jm->prev_cycle_count[
-			KBASE_CLOCK_DOMAIN_SHADER_CORES] = 0;
+		backend_jm->prev_cycle_count[KBASE_CLOCK_DOMAIN_SHADER_CORES] = 0;
 	}
 
 	/* Keep clk_enable_map for dump_request. */
@@ -319,27 +296,21 @@ static void kbasep_hwcnt_backend_jm_cc_enable(
  *
  * @backend_jm:      Non-NULL pointer to backend.
  */
-static void kbasep_hwcnt_backend_jm_cc_disable(
-	struct kbase_hwcnt_backend_jm *backend_jm)
+static void kbasep_hwcnt_backend_jm_cc_disable(struct kbase_hwcnt_backend_jm *backend_jm)
 {
 	struct kbase_device *kbdev = backend_jm->kctx->kbdev;
 	struct kbase_clk_rate_trace_manager *rtm = &kbdev->pm.clk_rtm;
 	u64 clk_enable_map = backend_jm->clk_enable_map;
 
-	if (kbase_hwcnt_clk_enable_map_enabled(
-		clk_enable_map, KBASE_CLOCK_DOMAIN_TOP)) {
+	if (kbase_hwcnt_clk_enable_map_enabled(clk_enable_map, KBASE_CLOCK_DOMAIN_TOP)) {
 		/* turn off the cycle counter */
 		kbase_pm_release_gpu_cycle_counter(kbdev);
 	}
 
-	if (kbase_hwcnt_clk_enable_map_enabled(
-		clk_enable_map, KBASE_CLOCK_DOMAIN_SHADER_CORES)) {
-
-		kbase_clk_rate_trace_manager_unsubscribe(
-			rtm, &backend_jm->rate_listener);
+	if (kbase_hwcnt_clk_enable_map_enabled(clk_enable_map, KBASE_CLOCK_DOMAIN_SHADER_CORES)) {
+		kbase_clk_rate_trace_manager_unsubscribe(rtm, &backend_jm->rate_listener);
 	}
 }
-
 
 /**
  * kbasep_hwcnt_gpu_update_curr_config() - Update the destination buffer with
@@ -356,38 +327,33 @@ static void kbasep_hwcnt_backend_jm_cc_disable(
  *
  * Return: 0 on success, else error code.
  */
-static int kbasep_hwcnt_gpu_update_curr_config(
-	struct kbase_device *kbdev,
-	struct kbase_hwcnt_curr_config *curr_config)
+static int kbasep_hwcnt_gpu_update_curr_config(struct kbase_device *kbdev,
+					       struct kbase_hwcnt_curr_config *curr_config)
 {
 	if (WARN_ON(!kbdev) || WARN_ON(!curr_config))
 		return -EINVAL;
 
 	lockdep_assert_held(&kbdev->hwaccess_lock);
 
-	curr_config->num_l2_slices =
-		kbdev->gpu_props.curr_config.l2_slices;
-	curr_config->shader_present =
-		kbdev->gpu_props.curr_config.shader_present;
+	curr_config->num_l2_slices = kbdev->gpu_props.curr_config.l2_slices;
+	curr_config->shader_present = kbdev->gpu_props.curr_config.shader_present;
 	return 0;
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_timestamp_ns_fn */
-static u64 kbasep_hwcnt_backend_jm_timestamp_ns(
-	struct kbase_hwcnt_backend *backend)
+static u64 kbasep_hwcnt_backend_jm_timestamp_ns(struct kbase_hwcnt_backend *backend)
 {
 	(void)backend;
 	return ktime_get_raw_ns();
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_enable_nolock_fn */
-static int kbasep_hwcnt_backend_jm_dump_enable_nolock(
-	struct kbase_hwcnt_backend *backend,
-	const struct kbase_hwcnt_enable_map *enable_map)
+static int
+kbasep_hwcnt_backend_jm_dump_enable_nolock(struct kbase_hwcnt_backend *backend,
+					   const struct kbase_hwcnt_enable_map *enable_map)
 {
 	int errcode;
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 	struct kbase_context *kctx;
 	struct kbase_device *kbdev;
 	struct kbase_hwcnt_physical_enable_map phys_enable_map;
@@ -406,8 +372,7 @@ static int kbasep_hwcnt_backend_jm_dump_enable_nolock(
 
 	kbase_hwcnt_gpu_enable_map_to_physical(&phys_enable_map, enable_map);
 
-	kbase_hwcnt_gpu_set_to_physical(&phys_counter_set,
-					backend_jm->info->counter_set);
+	kbase_hwcnt_gpu_set_to_physical(&phys_counter_set, backend_jm->info->counter_set);
 
 	enable.fe_bm = phys_enable_map.fe_bm;
 	enable.shader_bm = phys_enable_map.shader_bm;
@@ -425,8 +390,7 @@ static int kbasep_hwcnt_backend_jm_dump_enable_nolock(
 	timestamp_ns = kbasep_hwcnt_backend_jm_timestamp_ns(backend);
 
 	/* Update the current configuration information. */
-	errcode = kbasep_hwcnt_gpu_update_curr_config(kbdev,
-						      &backend_jm->curr_config);
+	errcode = kbasep_hwcnt_gpu_update_curr_config(kbdev, &backend_jm->curr_config);
 	if (errcode)
 		goto error;
 
@@ -446,14 +410,12 @@ error:
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_enable_fn */
-static int kbasep_hwcnt_backend_jm_dump_enable(
-	struct kbase_hwcnt_backend *backend,
-	const struct kbase_hwcnt_enable_map *enable_map)
+static int kbasep_hwcnt_backend_jm_dump_enable(struct kbase_hwcnt_backend *backend,
+					       const struct kbase_hwcnt_enable_map *enable_map)
 {
 	unsigned long flags;
 	int errcode;
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 	struct kbase_device *kbdev;
 
 	if (!backend_jm)
@@ -463,8 +425,7 @@ static int kbasep_hwcnt_backend_jm_dump_enable(
 
 	spin_lock_irqsave(&kbdev->hwaccess_lock, flags);
 
-	errcode = kbasep_hwcnt_backend_jm_dump_enable_nolock(
-		backend, enable_map);
+	errcode = kbasep_hwcnt_backend_jm_dump_enable_nolock(backend, enable_map);
 
 	spin_unlock_irqrestore(&kbdev->hwaccess_lock, flags);
 
@@ -472,12 +433,10 @@ static int kbasep_hwcnt_backend_jm_dump_enable(
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_disable_fn */
-static void kbasep_hwcnt_backend_jm_dump_disable(
-	struct kbase_hwcnt_backend *backend)
+static void kbasep_hwcnt_backend_jm_dump_disable(struct kbase_hwcnt_backend *backend)
 {
 	int errcode;
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 
 	if (WARN_ON(!backend_jm) || !backend_jm->enabled)
 		return;
@@ -491,11 +450,9 @@ static void kbasep_hwcnt_backend_jm_dump_disable(
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_clear_fn */
-static int kbasep_hwcnt_backend_jm_dump_clear(
-	struct kbase_hwcnt_backend *backend)
+static int kbasep_hwcnt_backend_jm_dump_clear(struct kbase_hwcnt_backend *backend)
 {
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 
 	if (!backend_jm || !backend_jm->enabled)
 		return -EINVAL;
@@ -504,12 +461,10 @@ static int kbasep_hwcnt_backend_jm_dump_clear(
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_request_fn */
-static int kbasep_hwcnt_backend_jm_dump_request(
-	struct kbase_hwcnt_backend *backend,
-	u64 *dump_time_ns)
+static int kbasep_hwcnt_backend_jm_dump_request(struct kbase_hwcnt_backend *backend,
+						u64 *dump_time_ns)
 {
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 	struct kbase_device *kbdev;
 	const struct kbase_hwcnt_metadata *metadata;
 	u64 current_cycle_count;
@@ -528,28 +483,25 @@ static int kbasep_hwcnt_backend_jm_dump_request(
 		*dump_time_ns = kbasep_hwcnt_backend_jm_timestamp_ns(backend);
 		ret = kbase_instr_hwcnt_request_dump(backend_jm->kctx);
 
-		kbase_hwcnt_metadata_for_each_clock(metadata, clk) {
-			if (!kbase_hwcnt_clk_enable_map_enabled(
-				backend_jm->clk_enable_map, clk))
+		kbase_hwcnt_metadata_for_each_clock(metadata, clk)
+		{
+			if (!kbase_hwcnt_clk_enable_map_enabled(backend_jm->clk_enable_map, clk))
 				continue;
 
 			if (clk == KBASE_CLOCK_DOMAIN_TOP) {
 				/* Read cycle count for top clock domain. */
-				kbase_backend_get_gpu_time_norequest(
-					kbdev, &current_cycle_count,
-					NULL, NULL);
+				kbase_backend_get_gpu_time_norequest(kbdev, &current_cycle_count,
+								     NULL, NULL);
 			} else {
 				/*
 				 * Estimate cycle count for non-top clock
 				 * domain.
 				 */
 				current_cycle_count = kbase_ccswe_cycle_at(
-					&backend_jm->ccswe_shader_cores,
-					*dump_time_ns);
+					&backend_jm->ccswe_shader_cores, *dump_time_ns);
 			}
 			backend_jm->cycle_count_elapsed[clk] =
-				current_cycle_count -
-				backend_jm->prev_cycle_count[clk];
+				current_cycle_count - backend_jm->prev_cycle_count[clk];
 
 			/*
 			 * Keep the current cycle count for later calculation.
@@ -563,11 +515,9 @@ static int kbasep_hwcnt_backend_jm_dump_request(
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_wait_fn */
-static int kbasep_hwcnt_backend_jm_dump_wait(
-	struct kbase_hwcnt_backend *backend)
+static int kbasep_hwcnt_backend_jm_dump_wait(struct kbase_hwcnt_backend *backend)
 {
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 
 	if (!backend_jm || !backend_jm->enabled)
 		return -EINVAL;
@@ -576,14 +526,12 @@ static int kbasep_hwcnt_backend_jm_dump_wait(
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_dump_get_fn */
-static int kbasep_hwcnt_backend_jm_dump_get(
-	struct kbase_hwcnt_backend *backend,
-	struct kbase_hwcnt_dump_buffer *dst,
-	const struct kbase_hwcnt_enable_map *dst_enable_map,
-	bool accumulate)
+static int kbasep_hwcnt_backend_jm_dump_get(struct kbase_hwcnt_backend *backend,
+					    struct kbase_hwcnt_dump_buffer *dst,
+					    const struct kbase_hwcnt_enable_map *dst_enable_map,
+					    bool accumulate)
 {
-	struct kbase_hwcnt_backend_jm *backend_jm =
-		(struct kbase_hwcnt_backend_jm *)backend;
+	struct kbase_hwcnt_backend_jm *backend_jm = (struct kbase_hwcnt_backend_jm *)backend;
 	size_t clk;
 #if IS_ENABLED(CONFIG_MALI_NO_MALI)
 	struct kbase_device *kbdev;
@@ -597,16 +545,15 @@ static int kbasep_hwcnt_backend_jm_dump_get(
 		return -EINVAL;
 
 	/* Invalidate the kernel buffer before reading from it. */
-	kbase_sync_mem_regions(
-		backend_jm->kctx, backend_jm->vmap, KBASE_SYNC_TO_CPU);
+	kbase_sync_mem_regions(backend_jm->kctx, backend_jm->vmap, KBASE_SYNC_TO_CPU);
 
 	/* Dump sample to the internal 64-bit user buffer. */
 	kbasep_hwcnt_backend_jm_dump_sample(backend_jm);
 
 	/* Extract elapsed cycle count for each clock domain if enabled. */
-	kbase_hwcnt_metadata_for_each_clock(dst_enable_map->metadata, clk) {
-		if (!kbase_hwcnt_clk_enable_map_enabled(
-			dst_enable_map->clk_enable_map, clk))
+	kbase_hwcnt_metadata_for_each_clock(dst_enable_map->metadata, clk)
+	{
+		if (!kbase_hwcnt_clk_enable_map_enabled(dst_enable_map->clk_enable_map, clk))
 			continue;
 
 		/* Reset the counter to zero if accumulation is off. */
@@ -621,17 +568,16 @@ static int kbasep_hwcnt_backend_jm_dump_get(
 	spin_lock_irqsave(&kbdev->hwaccess_lock, flags);
 
 	/* Update the current configuration information. */
-	errcode = kbasep_hwcnt_gpu_update_curr_config(kbdev,
-		&backend_jm->curr_config);
+	errcode = kbasep_hwcnt_gpu_update_curr_config(kbdev, &backend_jm->curr_config);
 
 	spin_unlock_irqrestore(&kbdev->hwaccess_lock, flags);
 
 	if (errcode)
 		return errcode;
 #endif /* CONFIG_MALI_NO_MALI */
-	return kbase_hwcnt_jm_dump_get(dst, backend_jm->to_user_buf,
-				       dst_enable_map, backend_jm->pm_core_mask,
-				       &backend_jm->curr_config, accumulate);
+	return kbase_hwcnt_jm_dump_get(dst, backend_jm->to_user_buf, dst_enable_map,
+				       backend_jm->pm_core_mask, &backend_jm->curr_config,
+				       accumulate);
 }
 
 /**
@@ -643,10 +589,8 @@ static int kbasep_hwcnt_backend_jm_dump_get(
  *
  * Return: 0 on success, else error code.
  */
-static int kbasep_hwcnt_backend_jm_dump_alloc(
-	const struct kbase_hwcnt_backend_jm_info *info,
-	struct kbase_context *kctx,
-	u64 *gpu_dump_va)
+static int kbasep_hwcnt_backend_jm_dump_alloc(const struct kbase_hwcnt_backend_jm_info *info,
+					      struct kbase_context *kctx, u64 *gpu_dump_va)
 {
 	struct kbase_va_region *reg;
 	u64 flags;
@@ -661,16 +605,12 @@ static int kbasep_hwcnt_backend_jm_dump_alloc(
 	WARN_ON(!kctx);
 	WARN_ON(!gpu_dump_va);
 
-	flags = BASE_MEM_PROT_CPU_RD |
-		BASE_MEM_PROT_GPU_WR |
-		BASEP_MEM_PERMANENT_KERNEL_MAPPING |
-		BASE_MEM_CACHED_CPU |
-		BASE_MEM_UNCACHED_GPU;
+	flags = BASE_MEM_PROT_CPU_RD | BASE_MEM_PROT_GPU_WR | BASEP_MEM_PERMANENT_KERNEL_MAPPING |
+		BASE_MEM_CACHED_CPU | BASE_MEM_UNCACHED_GPU;
 
 	nr_pages = PFN_UP(info->dump_bytes);
 
-	reg = kbase_mem_alloc(kctx, nr_pages, nr_pages, 0, &flags, gpu_dump_va,
-			      mmu_sync_info);
+	reg = kbase_mem_alloc(kctx, nr_pages, nr_pages, 0, &flags, gpu_dump_va, mmu_sync_info);
 
 	if (!reg)
 		return -ENOMEM;
@@ -683,9 +623,7 @@ static int kbasep_hwcnt_backend_jm_dump_alloc(
  * @kctx:        Non-NULL pointer to kbase context.
  * @gpu_dump_va: GPU dump buffer virtual address.
  */
-static void kbasep_hwcnt_backend_jm_dump_free(
-	struct kbase_context *kctx,
-	u64 gpu_dump_va)
+static void kbasep_hwcnt_backend_jm_dump_free(struct kbase_context *kctx, u64 gpu_dump_va)
 {
 	WARN_ON(!kctx);
 	if (gpu_dump_va)
@@ -698,8 +636,7 @@ static void kbasep_hwcnt_backend_jm_dump_free(
  *
  * Can be safely called on a backend in any state of partial construction.
  */
-static void kbasep_hwcnt_backend_jm_destroy(
-	struct kbase_hwcnt_backend_jm *backend)
+static void kbasep_hwcnt_backend_jm_destroy(struct kbase_hwcnt_backend_jm *backend)
 {
 	if (!backend)
 		return;
@@ -712,8 +649,7 @@ static void kbasep_hwcnt_backend_jm_destroy(
 			kbase_phy_alloc_mapping_put(kctx, backend->vmap);
 
 		if (backend->gpu_dump_va)
-			kbasep_hwcnt_backend_jm_dump_free(
-				kctx, backend->gpu_dump_va);
+			kbasep_hwcnt_backend_jm_dump_free(kctx, backend->gpu_dump_va);
 
 		kbasep_js_release_privileged_ctx(kbdev, kctx);
 		kbase_destroy_context(kctx);
@@ -731,9 +667,8 @@ static void kbasep_hwcnt_backend_jm_destroy(
  *
  * Return: 0 on success, else error code.
  */
-static int kbasep_hwcnt_backend_jm_create(
-	const struct kbase_hwcnt_backend_jm_info *info,
-	struct kbase_hwcnt_backend_jm **out_backend)
+static int kbasep_hwcnt_backend_jm_create(const struct kbase_hwcnt_backend_jm_info *info,
+					  struct kbase_hwcnt_backend_jm **out_backend)
 {
 	int errcode;
 	struct kbase_device *kbdev;
@@ -749,28 +684,25 @@ static int kbasep_hwcnt_backend_jm_create(
 		goto alloc_error;
 
 	backend->info = info;
-	kbasep_hwcnt_backend_jm_init_layout(&info->hwcnt_gpu_info,
-					    &backend->phys_layout);
+	kbasep_hwcnt_backend_jm_init_layout(&info->hwcnt_gpu_info, &backend->phys_layout);
 
 	backend->kctx = kbase_create_context(kbdev, true,
-		BASE_CONTEXT_SYSTEM_MONITOR_SUBMIT_DISABLED, 0, NULL);
+					     BASE_CONTEXT_SYSTEM_MONITOR_SUBMIT_DISABLED, 0, NULL);
 	if (!backend->kctx)
 		goto alloc_error;
 
 	kbasep_js_schedule_privileged_ctx(kbdev, backend->kctx);
 
-	errcode = kbasep_hwcnt_backend_jm_dump_alloc(
-		info, backend->kctx, &backend->gpu_dump_va);
+	errcode = kbasep_hwcnt_backend_jm_dump_alloc(info, backend->kctx, &backend->gpu_dump_va);
 	if (errcode)
 		goto error;
 
-	backend->cpu_dump_va = kbase_phy_alloc_mapping_get(backend->kctx,
-		backend->gpu_dump_va, &backend->vmap);
+	backend->cpu_dump_va =
+		kbase_phy_alloc_mapping_get(backend->kctx, backend->gpu_dump_va, &backend->vmap);
 	if (!backend->cpu_dump_va || !backend->vmap)
 		goto alloc_error;
 
-	backend->to_user_buf =
-		kzalloc(info->metadata->dump_buf_bytes, GFP_KERNEL);
+	backend->to_user_buf = kzalloc(info->metadata->dump_buf_bytes, GFP_KERNEL);
 	if (!backend->to_user_buf)
 		goto alloc_error;
 
@@ -798,9 +730,8 @@ kbasep_hwcnt_backend_jm_metadata(const struct kbase_hwcnt_backend_info *info)
 }
 
 /* JM backend implementation of kbase_hwcnt_backend_init_fn */
-static int kbasep_hwcnt_backend_jm_init(
-	const struct kbase_hwcnt_backend_info *info,
-	struct kbase_hwcnt_backend **out_backend)
+static int kbasep_hwcnt_backend_jm_init(const struct kbase_hwcnt_backend_info *info,
+					struct kbase_hwcnt_backend **out_backend)
 {
 	int errcode;
 	struct kbase_hwcnt_backend_jm *backend = NULL;
@@ -808,8 +739,8 @@ static int kbasep_hwcnt_backend_jm_init(
 	if (!info || !out_backend)
 		return -EINVAL;
 
-	errcode = kbasep_hwcnt_backend_jm_create(
-		(const struct kbase_hwcnt_backend_jm_info *) info, &backend);
+	errcode = kbasep_hwcnt_backend_jm_create((const struct kbase_hwcnt_backend_jm_info *)info,
+						 &backend);
 	if (errcode)
 		return errcode;
 
@@ -825,8 +756,7 @@ static void kbasep_hwcnt_backend_jm_term(struct kbase_hwcnt_backend *backend)
 		return;
 
 	kbasep_hwcnt_backend_jm_dump_disable(backend);
-	kbasep_hwcnt_backend_jm_destroy(
-		(struct kbase_hwcnt_backend_jm *)backend);
+	kbasep_hwcnt_backend_jm_destroy((struct kbase_hwcnt_backend_jm *)backend);
 }
 
 /**
@@ -835,8 +765,7 @@ static void kbasep_hwcnt_backend_jm_term(struct kbase_hwcnt_backend *backend)
  *
  * Can be safely called on a backend info in any state of partial construction.
  */
-static void kbasep_hwcnt_backend_jm_info_destroy(
-	const struct kbase_hwcnt_backend_jm_info *info)
+static void kbasep_hwcnt_backend_jm_info_destroy(const struct kbase_hwcnt_backend_jm_info *info)
 {
 	if (!info)
 		return;
@@ -852,9 +781,8 @@ static void kbasep_hwcnt_backend_jm_info_destroy(
  *
  * Return: 0 on success, else error code.
  */
-static int kbasep_hwcnt_backend_jm_info_create(
-	struct kbase_device *kbdev,
-	const struct kbase_hwcnt_backend_jm_info **out_info)
+static int kbasep_hwcnt_backend_jm_info_create(struct kbase_device *kbdev,
+					       const struct kbase_hwcnt_backend_jm_info **out_info)
 {
 	int errcode = -ENOMEM;
 	struct kbase_hwcnt_backend_jm_info *info = NULL;
@@ -877,15 +805,12 @@ static int kbasep_hwcnt_backend_jm_info_create(
 	info->counter_set = KBASE_HWCNT_SET_PRIMARY;
 #endif
 
-	errcode = kbasep_hwcnt_backend_jm_gpu_info_init(kbdev,
-							&info->hwcnt_gpu_info);
+	errcode = kbasep_hwcnt_backend_jm_gpu_info_init(kbdev, &info->hwcnt_gpu_info);
 	if (errcode)
 		goto error;
 
-	errcode = kbase_hwcnt_jm_metadata_create(&info->hwcnt_gpu_info,
-						 info->counter_set,
-						 &info->metadata,
-						 &info->dump_bytes);
+	errcode = kbase_hwcnt_jm_metadata_create(&info->hwcnt_gpu_info, info->counter_set,
+						 &info->metadata, &info->dump_bytes);
 	if (errcode)
 		goto error;
 
@@ -897,9 +822,8 @@ error:
 	return errcode;
 }
 
-int kbase_hwcnt_backend_jm_create(
-	struct kbase_device *kbdev,
-	struct kbase_hwcnt_backend_interface *iface)
+int kbase_hwcnt_backend_jm_create(struct kbase_device *kbdev,
+				  struct kbase_hwcnt_backend_interface *iface)
 {
 	int errcode;
 	const struct kbase_hwcnt_backend_jm_info *info = NULL;
@@ -928,8 +852,7 @@ int kbase_hwcnt_backend_jm_create(
 	return 0;
 }
 
-void kbase_hwcnt_backend_jm_destroy(
-	struct kbase_hwcnt_backend_interface *iface)
+void kbase_hwcnt_backend_jm_destroy(struct kbase_hwcnt_backend_interface *iface)
 {
 	if (!iface)
 		return;

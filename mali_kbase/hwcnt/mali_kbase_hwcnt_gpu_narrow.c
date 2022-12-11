@@ -19,21 +19,19 @@
  *
  */
 
-#include "mali_kbase_hwcnt_gpu.h"
-#include "mali_kbase_hwcnt_gpu_narrow.h"
+#include "hwcnt/mali_kbase_hwcnt_gpu.h"
+#include "hwcnt/mali_kbase_hwcnt_gpu_narrow.h"
 
 #include <linux/bug.h>
 #include <linux/err.h>
 #include <linux/slab.h>
 
-int kbase_hwcnt_gpu_metadata_narrow_create(
-	const struct kbase_hwcnt_metadata_narrow **dst_md_narrow,
-	const struct kbase_hwcnt_metadata *src_md)
+int kbase_hwcnt_gpu_metadata_narrow_create(const struct kbase_hwcnt_metadata_narrow **dst_md_narrow,
+					   const struct kbase_hwcnt_metadata *src_md)
 {
 	struct kbase_hwcnt_description desc;
 	struct kbase_hwcnt_group_description group;
-	struct kbase_hwcnt_block_description
-		blks[KBASE_HWCNT_V5_BLOCK_TYPE_COUNT];
+	struct kbase_hwcnt_block_description blks[KBASE_HWCNT_V5_BLOCK_TYPE_COUNT];
 	size_t prfcnt_values_per_block;
 	size_t blk;
 	int err;
@@ -47,18 +45,15 @@ int kbase_hwcnt_gpu_metadata_narrow_create(
 	 * count in the metadata.
 	 */
 	if ((kbase_hwcnt_metadata_group_count(src_md) != 1) ||
-	    (kbase_hwcnt_metadata_block_count(src_md, 0) !=
-	     KBASE_HWCNT_V5_BLOCK_TYPE_COUNT))
+	    (kbase_hwcnt_metadata_block_count(src_md, 0) != KBASE_HWCNT_V5_BLOCK_TYPE_COUNT))
 		return -EINVAL;
 
 	/* Get the values count in the first block. */
-	prfcnt_values_per_block =
-		kbase_hwcnt_metadata_block_values_count(src_md, 0, 0);
+	prfcnt_values_per_block = kbase_hwcnt_metadata_block_values_count(src_md, 0, 0);
 
 	/* check all blocks should have same values count. */
 	for (blk = 1; blk < KBASE_HWCNT_V5_BLOCK_TYPE_COUNT; blk++) {
-		size_t val_cnt =
-			kbase_hwcnt_metadata_block_values_count(src_md, 0, blk);
+		size_t val_cnt = kbase_hwcnt_metadata_block_values_count(src_md, 0, blk);
 		if (val_cnt != prfcnt_values_per_block)
 			return -EINVAL;
 	}
@@ -75,12 +70,10 @@ int kbase_hwcnt_gpu_metadata_narrow_create(
 	prfcnt_values_per_block = 64;
 
 	for (blk = 0; blk < KBASE_HWCNT_V5_BLOCK_TYPE_COUNT; blk++) {
-		size_t blk_hdr_cnt = kbase_hwcnt_metadata_block_headers_count(
-			src_md, 0, blk);
+		size_t blk_hdr_cnt = kbase_hwcnt_metadata_block_headers_count(src_md, 0, blk);
 		blks[blk] = (struct kbase_hwcnt_block_description){
 			.type = kbase_hwcnt_metadata_block_type(src_md, 0, blk),
-			.inst_cnt = kbase_hwcnt_metadata_block_instance_count(
-				src_md, 0, blk),
+			.inst_cnt = kbase_hwcnt_metadata_block_instance_count(src_md, 0, blk),
 			.hdr_cnt = blk_hdr_cnt,
 			.ctr_cnt = prfcnt_values_per_block - blk_hdr_cnt,
 		};
@@ -105,8 +98,7 @@ int kbase_hwcnt_gpu_metadata_narrow_create(
 		 * only supports 32-bit but the created metadata uses 64-bit for
 		 * block entry.
 		 */
-		metadata_narrow->dump_buf_bytes =
-			metadata_narrow->metadata->dump_buf_bytes >> 1;
+		metadata_narrow->dump_buf_bytes = metadata_narrow->metadata->dump_buf_bytes >> 1;
 		*dst_md_narrow = metadata_narrow;
 	} else {
 		kfree(metadata_narrow);
@@ -115,8 +107,7 @@ int kbase_hwcnt_gpu_metadata_narrow_create(
 	return err;
 }
 
-void kbase_hwcnt_gpu_metadata_narrow_destroy(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow)
+void kbase_hwcnt_gpu_metadata_narrow_destroy(const struct kbase_hwcnt_metadata_narrow *md_narrow)
 {
 	if (!md_narrow)
 		return;
@@ -125,9 +116,8 @@ void kbase_hwcnt_gpu_metadata_narrow_destroy(
 	kfree(md_narrow);
 }
 
-int kbase_hwcnt_dump_buffer_narrow_alloc(
-	const struct kbase_hwcnt_metadata_narrow *md_narrow,
-	struct kbase_hwcnt_dump_buffer_narrow *dump_buf)
+int kbase_hwcnt_dump_buffer_narrow_alloc(const struct kbase_hwcnt_metadata_narrow *md_narrow,
+					 struct kbase_hwcnt_dump_buffer_narrow *dump_buf)
 {
 	size_t dump_buf_bytes;
 	size_t clk_cnt_buf_bytes;
@@ -137,8 +127,7 @@ int kbase_hwcnt_dump_buffer_narrow_alloc(
 		return -EINVAL;
 
 	dump_buf_bytes = md_narrow->dump_buf_bytes;
-	clk_cnt_buf_bytes =
-		sizeof(*dump_buf->clk_cnt_buf) * md_narrow->metadata->clk_cnt;
+	clk_cnt_buf_bytes = sizeof(*dump_buf->clk_cnt_buf) * md_narrow->metadata->clk_cnt;
 
 	/* Make a single allocation for both dump_buf and clk_cnt_buf. */
 	buf = kmalloc(dump_buf_bytes + clk_cnt_buf_bytes, GFP_KERNEL);
@@ -154,8 +143,7 @@ int kbase_hwcnt_dump_buffer_narrow_alloc(
 	return 0;
 }
 
-void kbase_hwcnt_dump_buffer_narrow_free(
-	struct kbase_hwcnt_dump_buffer_narrow *dump_buf_narrow)
+void kbase_hwcnt_dump_buffer_narrow_free(struct kbase_hwcnt_dump_buffer_narrow *dump_buf_narrow)
 {
 	if (!dump_buf_narrow)
 		return;
@@ -180,8 +168,7 @@ int kbase_hwcnt_dump_buffer_narrow_array_alloc(
 		return -EINVAL;
 
 	dump_buf_bytes = md_narrow->dump_buf_bytes;
-	clk_cnt_buf_bytes = sizeof(*dump_bufs->bufs->clk_cnt_buf) *
-			    md_narrow->metadata->clk_cnt;
+	clk_cnt_buf_bytes = sizeof(*dump_bufs->bufs->clk_cnt_buf) * md_narrow->metadata->clk_cnt;
 
 	/* Allocate memory for the dump buffer struct array */
 	buffers = kmalloc_array(n, sizeof(*buffers), GFP_KERNEL);
@@ -234,27 +221,22 @@ void kbase_hwcnt_dump_buffer_narrow_array_free(
 	memset(dump_bufs, 0, sizeof(*dump_bufs));
 }
 
-void kbase_hwcnt_dump_buffer_block_copy_strict_narrow(u32 *dst_blk,
-						      const u64 *src_blk,
-						      const u64 *blk_em,
-						      size_t val_cnt)
+void kbase_hwcnt_dump_buffer_block_copy_strict_narrow(u32 *dst_blk, const u64 *src_blk,
+						      const u64 *blk_em, size_t val_cnt)
 {
 	size_t val;
 
 	for (val = 0; val < val_cnt; val++) {
-		bool val_enabled =
-			kbase_hwcnt_enable_map_block_value_enabled(blk_em, val);
-		u32 src_val =
-			(src_blk[val] > U32_MAX) ? U32_MAX : (u32)src_blk[val];
+		bool val_enabled = kbase_hwcnt_enable_map_block_value_enabled(blk_em, val);
+		u32 src_val = (src_blk[val] > U32_MAX) ? U32_MAX : (u32)src_blk[val];
 
 		dst_blk[val] = val_enabled ? src_val : 0;
 	}
 }
 
-void kbase_hwcnt_dump_buffer_copy_strict_narrow(
-	struct kbase_hwcnt_dump_buffer_narrow *dst_narrow,
-	const struct kbase_hwcnt_dump_buffer *src,
-	const struct kbase_hwcnt_enable_map *dst_enable_map)
+void kbase_hwcnt_dump_buffer_copy_strict_narrow(struct kbase_hwcnt_dump_buffer_narrow *dst_narrow,
+						const struct kbase_hwcnt_dump_buffer *src,
+						const struct kbase_hwcnt_enable_map *dst_enable_map)
 {
 	const struct kbase_hwcnt_metadata_narrow *metadata_narrow;
 	size_t grp;
@@ -262,68 +244,53 @@ void kbase_hwcnt_dump_buffer_copy_strict_narrow(
 
 	if (WARN_ON(!dst_narrow) || WARN_ON(!src) || WARN_ON(!dst_enable_map) ||
 	    WARN_ON(dst_narrow->md_narrow->metadata == src->metadata) ||
-	    WARN_ON(dst_narrow->md_narrow->metadata->grp_cnt !=
-		    src->metadata->grp_cnt) ||
+	    WARN_ON(dst_narrow->md_narrow->metadata->grp_cnt != src->metadata->grp_cnt) ||
 	    WARN_ON(src->metadata->grp_cnt != 1) ||
 	    WARN_ON(dst_narrow->md_narrow->metadata->grp_metadata[0].blk_cnt !=
 		    src->metadata->grp_metadata[0].blk_cnt) ||
 	    WARN_ON(dst_narrow->md_narrow->metadata->grp_metadata[0].blk_cnt !=
 		    KBASE_HWCNT_V5_BLOCK_TYPE_COUNT) ||
-	    WARN_ON(dst_narrow->md_narrow->metadata->grp_metadata[0]
-			    .blk_metadata[0]
-			    .ctr_cnt >
+	    WARN_ON(dst_narrow->md_narrow->metadata->grp_metadata[0].blk_metadata[0].ctr_cnt >
 		    src->metadata->grp_metadata[0].blk_metadata[0].ctr_cnt))
 		return;
 
 	/* Don't use src metadata since src buffer is bigger than dst buffer. */
 	metadata_narrow = dst_narrow->md_narrow;
 
-	for (grp = 0;
-	     grp < kbase_hwcnt_metadata_narrow_group_count(metadata_narrow);
-	     grp++) {
+	for (grp = 0; grp < kbase_hwcnt_metadata_narrow_group_count(metadata_narrow); grp++) {
 		size_t blk;
-		size_t blk_cnt = kbase_hwcnt_metadata_narrow_block_count(
-			metadata_narrow, grp);
+		size_t blk_cnt = kbase_hwcnt_metadata_narrow_block_count(metadata_narrow, grp);
 
 		for (blk = 0; blk < blk_cnt; blk++) {
 			size_t blk_inst;
-			size_t blk_inst_cnt =
-				kbase_hwcnt_metadata_narrow_block_instance_count(
-					metadata_narrow, grp, blk);
+			size_t blk_inst_cnt = kbase_hwcnt_metadata_narrow_block_instance_count(
+				metadata_narrow, grp, blk);
 
-			for (blk_inst = 0; blk_inst < blk_inst_cnt;
-			     blk_inst++) {
+			for (blk_inst = 0; blk_inst < blk_inst_cnt; blk_inst++) {
 				/* The narrowed down buffer is only 32-bit. */
-				u32 *dst_blk =
-					kbase_hwcnt_dump_buffer_narrow_block_instance(
-						dst_narrow, grp, blk, blk_inst);
-				const u64 *src_blk =
-					kbase_hwcnt_dump_buffer_block_instance(
-						src, grp, blk, blk_inst);
-				const u64 *blk_em =
-					kbase_hwcnt_enable_map_block_instance(
-						dst_enable_map, grp, blk,
-						blk_inst);
-				size_t val_cnt =
-					kbase_hwcnt_metadata_narrow_block_values_count(
-						metadata_narrow, grp, blk);
+				u32 *dst_blk = kbase_hwcnt_dump_buffer_narrow_block_instance(
+					dst_narrow, grp, blk, blk_inst);
+				const u64 *src_blk = kbase_hwcnt_dump_buffer_block_instance(
+					src, grp, blk, blk_inst);
+				const u64 *blk_em = kbase_hwcnt_enable_map_block_instance(
+					dst_enable_map, grp, blk, blk_inst);
+				size_t val_cnt = kbase_hwcnt_metadata_narrow_block_values_count(
+					metadata_narrow, grp, blk);
 				/* Align upwards to include padding bytes */
 				val_cnt = KBASE_HWCNT_ALIGN_UPWARDS(
-					val_cnt,
-					(KBASE_HWCNT_BLOCK_BYTE_ALIGNMENT /
-					 KBASE_HWCNT_VALUE_BYTES));
+					val_cnt, (KBASE_HWCNT_BLOCK_BYTE_ALIGNMENT /
+						  KBASE_HWCNT_VALUE_BYTES));
 
-				kbase_hwcnt_dump_buffer_block_copy_strict_narrow(
-					dst_blk, src_blk, blk_em, val_cnt);
+				kbase_hwcnt_dump_buffer_block_copy_strict_narrow(dst_blk, src_blk,
+										 blk_em, val_cnt);
 			}
 		}
 	}
 
 	for (clk = 0; clk < metadata_narrow->metadata->clk_cnt; clk++) {
-		bool clk_enabled = kbase_hwcnt_clk_enable_map_enabled(
-			dst_enable_map->clk_enable_map, clk);
+		bool clk_enabled =
+			kbase_hwcnt_clk_enable_map_enabled(dst_enable_map->clk_enable_map, clk);
 
-		dst_narrow->clk_cnt_buf[clk] =
-			clk_enabled ? src->clk_cnt_buf[clk] : 0;
+		dst_narrow->clk_cnt_buf[clk] = clk_enabled ? src->clk_cnt_buf[clk] : 0;
 	}
 }

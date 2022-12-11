@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2021-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -20,8 +20,8 @@
  */
 
 #include "mali_kbase.h"
-#include "mali_kbase_hwcnt_watchdog_if.h"
-#include "mali_kbase_hwcnt_watchdog_if_timer.h"
+#include "hwcnt/mali_kbase_hwcnt_watchdog_if.h"
+#include "hwcnt/mali_kbase_hwcnt_watchdog_if_timer.h"
 
 #include <linux/workqueue.h>
 #include <linux/slab.h>
@@ -62,12 +62,10 @@ static void kbasep_hwcnt_watchdog_callback(struct work_struct *const work)
 }
 
 static int kbasep_hwcnt_watchdog_if_timer_enable(
-	const struct kbase_hwcnt_watchdog_info *const timer,
-	u32 const period_ms, kbase_hwcnt_watchdog_callback_fn *const callback,
-	void *const user_data)
+	const struct kbase_hwcnt_watchdog_info *const timer, u32 const period_ms,
+	kbase_hwcnt_watchdog_callback_fn *const callback, void *const user_data)
 {
-	struct kbase_hwcnt_watchdog_if_timer_info *const timer_info =
-		(void *)timer;
+	struct kbase_hwcnt_watchdog_if_timer_info *const timer_info = (void *)timer;
 
 	if (WARN_ON(!timer) || WARN_ON(!callback) || WARN_ON(timer_info->timer_enabled))
 		return -EINVAL;
@@ -81,11 +79,10 @@ static int kbasep_hwcnt_watchdog_if_timer_enable(
 	return 0;
 }
 
-static void kbasep_hwcnt_watchdog_if_timer_disable(
-	const struct kbase_hwcnt_watchdog_info *const timer)
+static void
+kbasep_hwcnt_watchdog_if_timer_disable(const struct kbase_hwcnt_watchdog_info *const timer)
 {
-	struct kbase_hwcnt_watchdog_if_timer_info *const timer_info =
-		(void *)timer;
+	struct kbase_hwcnt_watchdog_if_timer_info *const timer_info = (void *)timer;
 
 	if (WARN_ON(!timer))
 		return;
@@ -97,11 +94,11 @@ static void kbasep_hwcnt_watchdog_if_timer_disable(
 	timer_info->timer_enabled = false;
 }
 
-static void kbasep_hwcnt_watchdog_if_timer_modify(
-	const struct kbase_hwcnt_watchdog_info *const timer, u32 const delay_ms)
+static void
+kbasep_hwcnt_watchdog_if_timer_modify(const struct kbase_hwcnt_watchdog_info *const timer,
+				      u32 const delay_ms)
 {
-	struct kbase_hwcnt_watchdog_if_timer_info *const timer_info =
-		(void *)timer;
+	struct kbase_hwcnt_watchdog_if_timer_info *const timer_info = (void *)timer;
 
 	if (WARN_ON(!timer) || WARN_ON(!timer_info->timer_enabled))
 		return;
@@ -109,8 +106,7 @@ static void kbasep_hwcnt_watchdog_if_timer_modify(
 	mod_delayed_work(timer_info->workq, &timer_info->dwork, msecs_to_jiffies(delay_ms));
 }
 
-void kbase_hwcnt_watchdog_if_timer_destroy(
-	struct kbase_hwcnt_watchdog_interface *const watchdog_if)
+void kbase_hwcnt_watchdog_if_timer_destroy(struct kbase_hwcnt_watchdog_interface *const watchdog_if)
 {
 	struct kbase_hwcnt_watchdog_if_timer_info *timer_info;
 
@@ -128,8 +124,7 @@ void kbase_hwcnt_watchdog_if_timer_destroy(
 	*watchdog_if = (struct kbase_hwcnt_watchdog_interface){ NULL };
 }
 
-int kbase_hwcnt_watchdog_if_timer_create(
-	struct kbase_hwcnt_watchdog_interface *const watchdog_if)
+int kbase_hwcnt_watchdog_if_timer_create(struct kbase_hwcnt_watchdog_interface *const watchdog_if)
 {
 	struct kbase_hwcnt_watchdog_if_timer_info *timer_info;
 
@@ -140,9 +135,7 @@ int kbase_hwcnt_watchdog_if_timer_create(
 	if (!timer_info)
 		return -ENOMEM;
 
-	*timer_info =
-		(struct kbase_hwcnt_watchdog_if_timer_info){ .timer_enabled =
-								     false };
+	*timer_info = (struct kbase_hwcnt_watchdog_if_timer_info){ .timer_enabled = false };
 
 	INIT_DELAYED_WORK(&timer_info->dwork, kbasep_hwcnt_watchdog_callback);
 

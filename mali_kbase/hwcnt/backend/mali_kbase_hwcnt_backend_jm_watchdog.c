@@ -21,11 +21,11 @@
 
 #include <mali_kbase.h>
 
-#include <mali_kbase_hwcnt_gpu.h>
-#include <mali_kbase_hwcnt_types.h>
+#include <hwcnt/mali_kbase_hwcnt_gpu.h>
+#include <hwcnt/mali_kbase_hwcnt_types.h>
 
-#include <mali_kbase_hwcnt_backend.h>
-#include <mali_kbase_hwcnt_watchdog_if.h>
+#include <hwcnt/backend/mali_kbase_hwcnt_backend.h>
+#include <hwcnt/mali_kbase_hwcnt_watchdog_if.h>
 
 #if IS_ENABLED(CONFIG_MALI_IS_FPGA) && !IS_ENABLED(CONFIG_MALI_NO_MALI)
 /* Backend watch dog timer interval in milliseconds: 18 seconds. */
@@ -118,8 +118,7 @@ enum backend_watchdog_state {
  */
 enum wd_init_state {
 	HWCNT_JM_WD_INIT_START,
-	HWCNT_JM_WD_INIT_ALLOC = HWCNT_JM_WD_INIT_START,
-	HWCNT_JM_WD_INIT_BACKEND,
+	HWCNT_JM_WD_INIT_BACKEND = HWCNT_JM_WD_INIT_START,
 	HWCNT_JM_WD_INIT_ENABLE_MAP,
 	HWCNT_JM_WD_INIT_DUMP_BUFFER,
 	HWCNT_JM_WD_INIT_END
@@ -296,16 +295,10 @@ kbasep_hwcnt_backend_jm_watchdog_term_partial(struct kbase_hwcnt_backend_jm_watc
 	if (!wd_backend)
 		return;
 
-	/* disable timer thread to avoid concurrent access to shared resources */
-	wd_backend->info->dump_watchdog_iface->disable(
-		wd_backend->info->dump_watchdog_iface->timer);
+	WARN_ON(state > HWCNT_JM_WD_INIT_END);
 
-	/*will exit the loop when state reaches HWCNT_JM_WD_INIT_START*/
 	while (state-- > HWCNT_JM_WD_INIT_START) {
 		switch (state) {
-		case HWCNT_JM_WD_INIT_ALLOC:
-			kfree(wd_backend);
-			break;
 		case HWCNT_JM_WD_INIT_BACKEND:
 			wd_backend->info->jm_backend_iface->term(wd_backend->jm_backend);
 			break;
@@ -319,6 +312,8 @@ kbasep_hwcnt_backend_jm_watchdog_term_partial(struct kbase_hwcnt_backend_jm_watc
 			break;
 		}
 	}
+
+	kfree(wd_backend);
 }
 
 /* Job manager watchdog backend, implementation of kbase_hwcnt_backend_term_fn
@@ -326,11 +321,17 @@ kbasep_hwcnt_backend_jm_watchdog_term_partial(struct kbase_hwcnt_backend_jm_watc
  */
 static void kbasep_hwcnt_backend_jm_watchdog_term(struct kbase_hwcnt_backend *backend)
 {
+	struct kbase_hwcnt_backend_jm_watchdog *wd_backend =
+		(struct kbase_hwcnt_backend_jm_watchdog *)backend;
+
 	if (!backend)
 		return;
 
-	kbasep_hwcnt_backend_jm_watchdog_term_partial(
-		(struct kbase_hwcnt_backend_jm_watchdog *)backend, HWCNT_JM_WD_INIT_END);
+	/* disable timer thread to avoid concurrent access to shared resources */
+	wd_backend->info->dump_watchdog_iface->disable(
+		wd_backend->info->dump_watchdog_iface->timer);
+
+	kbasep_hwcnt_backend_jm_watchdog_term_partial(wd_backend, HWCNT_JM_WD_INIT_END);
 }
 
 /* Job manager watchdog backend, implementation of kbase_hwcnt_backend_init_fn */
@@ -350,20 +351,20 @@ static int kbasep_hwcnt_backend_jm_watchdog_init(const struct kbase_hwcnt_backen
 	jm_info = wd_info->jm_backend_iface->info;
 	metadata = wd_info->jm_backend_iface->metadata(wd_info->jm_backend_iface->info);
 
+	wd_backend = kmalloc(sizeof(*wd_backend), GFP_KERNEL);
+	if (!wd_backend) {
+		*out_backend = NULL;
+		return -ENOMEM;
+	}
+
+	*wd_backend = (struct kbase_hwcnt_backend_jm_watchdog){
+		.info = wd_info,
+		.timeout_ms = hwcnt_backend_watchdog_timer_interval_ms,
+		.locked = { .state = HWCNT_JM_WD_IDLE_BUFFER_EMPTY, .is_enabled = false }
+	};
+
 	while (state < HWCNT_JM_WD_INIT_END && !errcode) {
 		switch (state) {
-		case HWCNT_JM_WD_INIT_ALLOC:
-			wd_backend = kmalloc(sizeof(*wd_backend), GFP_KERNEL);
-			if (wd_backend) {
-				*wd_backend = (struct kbase_hwcnt_backend_jm_watchdog){
-					.info = wd_info,
-					.timeout_ms = hwcnt_backend_watchdog_timer_interval_ms,
-					.locked = { .state = HWCNT_JM_WD_IDLE_BUFFER_EMPTY,
-						    .is_enabled = false }
-				};
-			} else
-				errcode = -ENOMEM;
-			break;
 		case HWCNT_JM_WD_INIT_BACKEND:
 			errcode = wd_info->jm_backend_iface->init(jm_info, &wd_backend->jm_backend);
 			break;

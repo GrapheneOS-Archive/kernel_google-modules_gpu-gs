@@ -157,17 +157,6 @@ menuconfig MALI_EXPERT
 	  Enabling this option and modifying the default settings may produce
 	  a driver with performance or other limitations.
 
-config MALI_2MB_ALLOC
-	bool "Attempt to allocate 2MB pages"
-	depends on MALI_MIDGARD && MALI_EXPERT
-	default n
-	help
-	  Rather than allocating all GPU memory page-by-page, attempt to
-	  allocate 2MB pages from the kernel. This reduces TLB pressure and
-	  helps to prevent memory fragmentation.
-
-	  If in doubt, say N
-
 config MALI_MEMORY_FULLY_BACKED
 	bool "Enable memory fully physically-backed"
 	depends on MALI_MIDGARD && MALI_EXPERT

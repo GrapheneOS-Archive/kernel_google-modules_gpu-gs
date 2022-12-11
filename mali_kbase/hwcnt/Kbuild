@@ -19,14 +19,19 @@
 #
 
 mali_kbase-y += \
-    tl/mali_kbase_timeline.o \
-    tl/mali_kbase_timeline_io.o \
-    tl/mali_kbase_tlstream.o \
-    tl/mali_kbase_tracepoints.o
-
+    hwcnt/mali_kbase_hwcnt.o \
+    hwcnt/mali_kbase_hwcnt_gpu.o \
+    hwcnt/mali_kbase_hwcnt_gpu_narrow.o \
+    hwcnt/mali_kbase_hwcnt_types.o \
+    hwcnt/mali_kbase_hwcnt_virtualizer.o \
+    hwcnt/mali_kbase_hwcnt_watchdog_if_timer.o
 
 ifeq ($(CONFIG_MALI_CSF_SUPPORT),y)
-    mali_kbase-y += tl/backend/mali_kbase_timeline_csf.o
+    mali_kbase-y += \
+        hwcnt/backend/mali_kbase_hwcnt_backend_csf.o \
+        hwcnt/backend/mali_kbase_hwcnt_backend_csf_if_fw.o
 else
-    mali_kbase-y += tl/backend/mali_kbase_timeline_jm.o
+    mali_kbase-y += \
+        hwcnt/backend/mali_kbase_hwcnt_backend_jm.o \
+        hwcnt/backend/mali_kbase_hwcnt_backend_jm_watchdog.o
 endif

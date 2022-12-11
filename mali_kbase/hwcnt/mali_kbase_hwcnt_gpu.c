@@ -19,8 +19,8 @@
  *
  */
 
-#include "mali_kbase_hwcnt_gpu.h"
-#include "mali_kbase_hwcnt_types.h"
+#include "hwcnt/mali_kbase_hwcnt_gpu.h"
+#include "hwcnt/mali_kbase_hwcnt_types.h"
 
 #include <linux/err.h>
 
@@ -32,8 +32,7 @@ enum enable_map_idx {
 	EM_COUNT,
 };
 
-static void kbasep_get_fe_block_type(u64 *dst, enum kbase_hwcnt_set counter_set,
-				     bool is_csf)
+static void kbasep_get_fe_block_type(u64 *dst, enum kbase_hwcnt_set counter_set, bool is_csf)
 {
 	switch (counter_set) {
 	case KBASE_HWCNT_SET_PRIMARY:
@@ -56,8 +55,7 @@ static void kbasep_get_fe_block_type(u64 *dst, enum kbase_hwcnt_set counter_set,
 	}
 }
 
-static void kbasep_get_tiler_block_type(u64 *dst,
-					enum kbase_hwcnt_set counter_set)
+static void kbasep_get_tiler_block_type(u64 *dst, enum kbase_hwcnt_set counter_set)
 {
 	switch (counter_set) {
 	case KBASE_HWCNT_SET_PRIMARY:
@@ -72,8 +70,7 @@ static void kbasep_get_tiler_block_type(u64 *dst,
 	}
 }
 
-static void kbasep_get_sc_block_type(u64 *dst, enum kbase_hwcnt_set counter_set,
-				     bool is_csf)
+static void kbasep_get_sc_block_type(u64 *dst, enum kbase_hwcnt_set counter_set, bool is_csf)
 {
 	switch (counter_set) {
 	case KBASE_HWCNT_SET_PRIMARY:
@@ -93,8 +90,7 @@ static void kbasep_get_sc_block_type(u64 *dst, enum kbase_hwcnt_set counter_set,
 	}
 }
 
-static void kbasep_get_memsys_block_type(u64 *dst,
-					 enum kbase_hwcnt_set counter_set)
+static void kbasep_get_memsys_block_type(u64 *dst, enum kbase_hwcnt_set counter_set)
 {
 	switch (counter_set) {
 	case KBASE_HWCNT_SET_PRIMARY:
@@ -122,15 +118,14 @@ static void kbasep_get_memsys_block_type(u64 *dst,
  *
  * Return: 0 on success, else error code.
  */
-static int kbasep_hwcnt_backend_gpu_metadata_create(
-	const struct kbase_hwcnt_gpu_info *gpu_info, const bool is_csf,
-	enum kbase_hwcnt_set counter_set,
-	const struct kbase_hwcnt_metadata **metadata)
+static int kbasep_hwcnt_backend_gpu_metadata_create(const struct kbase_hwcnt_gpu_info *gpu_info,
+						    const bool is_csf,
+						    enum kbase_hwcnt_set counter_set,
+						    const struct kbase_hwcnt_metadata **metadata)
 {
 	struct kbase_hwcnt_description desc;
 	struct kbase_hwcnt_group_description group;
-	struct kbase_hwcnt_block_description
-		blks[KBASE_HWCNT_V5_BLOCK_TYPE_COUNT];
+	struct kbase_hwcnt_block_description blks[KBASE_HWCNT_V5_BLOCK_TYPE_COUNT];
 	size_t non_sc_block_count;
 	size_t sc_block_count;
 
@@ -156,22 +151,19 @@ static int kbasep_hwcnt_backend_gpu_metadata_create(
 	kbasep_get_fe_block_type(&blks[0].type, counter_set, is_csf);
 	blks[0].inst_cnt = 1;
 	blks[0].hdr_cnt = KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
-	blks[0].ctr_cnt = gpu_info->prfcnt_values_per_block -
-			  KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
+	blks[0].ctr_cnt = gpu_info->prfcnt_values_per_block - KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
 
 	/* One Tiler block */
 	kbasep_get_tiler_block_type(&blks[1].type, counter_set);
 	blks[1].inst_cnt = 1;
 	blks[1].hdr_cnt = KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
-	blks[1].ctr_cnt = gpu_info->prfcnt_values_per_block -
-			  KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
+	blks[1].ctr_cnt = gpu_info->prfcnt_values_per_block - KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
 
 	/* l2_count memsys blks */
 	kbasep_get_memsys_block_type(&blks[2].type, counter_set);
 	blks[2].inst_cnt = gpu_info->l2_count;
 	blks[2].hdr_cnt = KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
-	blks[2].ctr_cnt = gpu_info->prfcnt_values_per_block -
-			  KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
+	blks[2].ctr_cnt = gpu_info->prfcnt_values_per_block - KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
 
 	/*
 	 * There are as many shader cores in the system as there are bits set in
@@ -192,8 +184,7 @@ static int kbasep_hwcnt_backend_gpu_metadata_create(
 	kbasep_get_sc_block_type(&blks[3].type, counter_set, is_csf);
 	blks[3].inst_cnt = sc_block_count;
 	blks[3].hdr_cnt = KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
-	blks[3].ctr_cnt = gpu_info->prfcnt_values_per_block -
-			  KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
+	blks[3].ctr_cnt = gpu_info->prfcnt_values_per_block - KBASE_HWCNT_V5_HEADERS_PER_BLOCK;
 
 	WARN_ON(KBASE_HWCNT_V5_BLOCK_TYPE_COUNT != 4);
 
@@ -220,8 +211,7 @@ static int kbasep_hwcnt_backend_gpu_metadata_create(
  *
  * Return: Size of buffer the GPU needs to perform a counter dump.
  */
-static size_t
-kbasep_hwcnt_backend_jm_dump_bytes(const struct kbase_hwcnt_gpu_info *gpu_info)
+static size_t kbasep_hwcnt_backend_jm_dump_bytes(const struct kbase_hwcnt_gpu_info *gpu_info)
 {
 	WARN_ON(!gpu_info);
 
@@ -229,11 +219,10 @@ kbasep_hwcnt_backend_jm_dump_bytes(const struct kbase_hwcnt_gpu_info *gpu_info)
 	       gpu_info->prfcnt_values_per_block * KBASE_HWCNT_VALUE_HW_BYTES;
 }
 
-int kbase_hwcnt_jm_metadata_create(
-	const struct kbase_hwcnt_gpu_info *gpu_info,
-	enum kbase_hwcnt_set counter_set,
-	const struct kbase_hwcnt_metadata **out_metadata,
-	size_t *out_dump_bytes)
+int kbase_hwcnt_jm_metadata_create(const struct kbase_hwcnt_gpu_info *gpu_info,
+				   enum kbase_hwcnt_set counter_set,
+				   const struct kbase_hwcnt_metadata **out_metadata,
+				   size_t *out_dump_bytes)
 {
 	int errcode;
 	const struct kbase_hwcnt_metadata *metadata;
@@ -250,8 +239,7 @@ int kbase_hwcnt_jm_metadata_create(
 	 * all the available L2 cache and Shader cores are allocated.
 	 */
 	dump_bytes = kbasep_hwcnt_backend_jm_dump_bytes(gpu_info);
-	errcode = kbasep_hwcnt_backend_gpu_metadata_create(
-		gpu_info, false, counter_set, &metadata);
+	errcode = kbasep_hwcnt_backend_gpu_metadata_create(gpu_info, false, counter_set, &metadata);
 	if (errcode)
 		return errcode;
 
@@ -276,10 +264,9 @@ void kbase_hwcnt_jm_metadata_destroy(const struct kbase_hwcnt_metadata *metadata
 	kbase_hwcnt_metadata_destroy(metadata);
 }
 
-int kbase_hwcnt_csf_metadata_create(
-	const struct kbase_hwcnt_gpu_info *gpu_info,
-	enum kbase_hwcnt_set counter_set,
-	const struct kbase_hwcnt_metadata **out_metadata)
+int kbase_hwcnt_csf_metadata_create(const struct kbase_hwcnt_gpu_info *gpu_info,
+				    enum kbase_hwcnt_set counter_set,
+				    const struct kbase_hwcnt_metadata **out_metadata)
 {
 	int errcode;
 	const struct kbase_hwcnt_metadata *metadata;
@@ -287,8 +274,7 @@ int kbase_hwcnt_csf_metadata_create(
 	if (!gpu_info || !out_metadata)
 		return -EINVAL;
 
-	errcode = kbasep_hwcnt_backend_gpu_metadata_create(
-		gpu_info, true, counter_set, &metadata);
+	errcode = kbasep_hwcnt_backend_gpu_metadata_create(gpu_info, true, counter_set, &metadata);
 	if (errcode)
 		return errcode;
 
@@ -297,8 +283,7 @@ int kbase_hwcnt_csf_metadata_create(
 	return 0;
 }
 
-void kbase_hwcnt_csf_metadata_destroy(
-	const struct kbase_hwcnt_metadata *metadata)
+void kbase_hwcnt_csf_metadata_destroy(const struct kbase_hwcnt_metadata *metadata)
 {
 	if (!metadata)
 		return;
@@ -306,10 +291,7 @@ void kbase_hwcnt_csf_metadata_destroy(
 	kbase_hwcnt_metadata_destroy(metadata);
 }
 
-static bool is_block_type_shader(
-	const u64 grp_type,
-	const u64 blk_type,
-	const size_t blk)
+static bool is_block_type_shader(const u64 grp_type, const u64 blk_type, const size_t blk)
 {
 	bool is_shader = false;
 
@@ -326,9 +308,7 @@ static bool is_block_type_shader(
 	return is_shader;
 }
 
-static bool is_block_type_l2_cache(
-	const u64 grp_type,
-	const u64 blk_type)
+static bool is_block_type_l2_cache(const u64 grp_type, const u64 blk_type)
 {
 	bool is_l2_cache = false;
 
@@ -348,10 +328,8 @@ static bool is_block_type_l2_cache(
 }
 
 int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
-			    const struct kbase_hwcnt_enable_map *dst_enable_map,
-			    u64 pm_core_mask,
-			    const struct kbase_hwcnt_curr_config *curr_config,
-			    bool accumulate)
+			    const struct kbase_hwcnt_enable_map *dst_enable_map, u64 pm_core_mask,
+			    const struct kbase_hwcnt_curr_config *curr_config, bool accumulate)
 {
 	const struct kbase_hwcnt_metadata *metadata;
 	size_t grp, blk, blk_inst;
@@ -362,28 +340,21 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 	/* Variables to deal with the current configuration */
 	int l2_count = 0;
 
-	if (!dst || !src || !dst_enable_map ||
-	    (dst_enable_map->metadata != dst->metadata))
+	if (!dst || !src || !dst_enable_map || (dst_enable_map->metadata != dst->metadata))
 		return -EINVAL;
 
 	metadata = dst->metadata;
 
-	kbase_hwcnt_metadata_for_each_block(
-		metadata, grp, blk, blk_inst) {
-		const size_t hdr_cnt =
-			kbase_hwcnt_metadata_block_headers_count(
-				metadata, grp, blk);
+	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst)
+	{
+		const size_t hdr_cnt = kbase_hwcnt_metadata_block_headers_count(metadata, grp, blk);
 		const size_t ctr_cnt =
-			kbase_hwcnt_metadata_block_counters_count(
-				metadata, grp, blk);
-		const u64 blk_type = kbase_hwcnt_metadata_block_type(
-			metadata, grp, blk);
+			kbase_hwcnt_metadata_block_counters_count(metadata, grp, blk);
+		const u64 blk_type = kbase_hwcnt_metadata_block_type(metadata, grp, blk);
 		const bool is_shader_core = is_block_type_shader(
-			kbase_hwcnt_metadata_group_type(metadata, grp),
-			blk_type, blk);
+			kbase_hwcnt_metadata_group_type(metadata, grp), blk_type, blk);
 		const bool is_l2_cache = is_block_type_l2_cache(
-			kbase_hwcnt_metadata_group_type(metadata, grp),
-			blk_type);
+			kbase_hwcnt_metadata_group_type(metadata, grp), blk_type);
 		const bool is_undefined = kbase_hwcnt_is_block_type_undefined(
 			kbase_hwcnt_metadata_group_type(metadata, grp), blk_type);
 		bool hw_res_available = true;
@@ -412,10 +383,9 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 		/*
 		 * Skip block if no values in the destination block are enabled.
 		 */
-		if (kbase_hwcnt_enable_map_block_enabled(
-			dst_enable_map, grp, blk, blk_inst)) {
-			u64 *dst_blk = kbase_hwcnt_dump_buffer_block_instance(
-				dst, grp, blk, blk_inst);
+		if (kbase_hwcnt_enable_map_block_enabled(dst_enable_map, grp, blk, blk_inst)) {
+			u64 *dst_blk =
+				kbase_hwcnt_dump_buffer_block_instance(dst, grp, blk, blk_inst);
 			const u64 *src_blk = dump_src + src_offset;
 			bool blk_powered;
 
@@ -435,13 +405,11 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 			if (blk_powered && !is_undefined && hw_res_available) {
 				/* Only powered and defined blocks have valid data. */
 				if (accumulate) {
-					kbase_hwcnt_dump_buffer_block_accumulate(
-						dst_blk, src_blk, hdr_cnt,
-						ctr_cnt);
+					kbase_hwcnt_dump_buffer_block_accumulate(dst_blk, src_blk,
+										 hdr_cnt, ctr_cnt);
 				} else {
-					kbase_hwcnt_dump_buffer_block_copy(
-						dst_blk, src_blk,
-						(hdr_cnt + ctr_cnt));
+					kbase_hwcnt_dump_buffer_block_copy(dst_blk, src_blk,
+									   (hdr_cnt + ctr_cnt));
 				}
 			} else {
 				/* Even though the block might be undefined, the
@@ -469,26 +437,23 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 }
 
 int kbase_hwcnt_csf_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
-			     const struct kbase_hwcnt_enable_map *dst_enable_map,
-			     bool accumulate)
+			     const struct kbase_hwcnt_enable_map *dst_enable_map, bool accumulate)
 {
 	const struct kbase_hwcnt_metadata *metadata;
 	const u64 *dump_src = src;
 	size_t src_offset = 0;
 	size_t grp, blk, blk_inst;
 
-	if (!dst || !src || !dst_enable_map ||
-	    (dst_enable_map->metadata != dst->metadata))
+	if (!dst || !src || !dst_enable_map || (dst_enable_map->metadata != dst->metadata))
 		return -EINVAL;
 
 	metadata = dst->metadata;
 
-	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst) {
-		const size_t hdr_cnt = kbase_hwcnt_metadata_block_headers_count(
-			metadata, grp, blk);
+	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst)
+	{
+		const size_t hdr_cnt = kbase_hwcnt_metadata_block_headers_count(metadata, grp, blk);
 		const size_t ctr_cnt =
-			kbase_hwcnt_metadata_block_counters_count(metadata, grp,
-								  blk);
+			kbase_hwcnt_metadata_block_counters_count(metadata, grp, blk);
 		const uint64_t blk_type = kbase_hwcnt_metadata_block_type(metadata, grp, blk);
 		const bool is_undefined = kbase_hwcnt_is_block_type_undefined(
 			kbase_hwcnt_metadata_group_type(metadata, grp), blk_type);
@@ -496,10 +461,9 @@ int kbase_hwcnt_csf_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 		/*
 		 * Skip block if no values in the destination block are enabled.
 		 */
-		if (kbase_hwcnt_enable_map_block_enabled(dst_enable_map, grp,
-							 blk, blk_inst)) {
-			u64 *dst_blk = kbase_hwcnt_dump_buffer_block_instance(
-				dst, grp, blk, blk_inst);
+		if (kbase_hwcnt_enable_map_block_enabled(dst_enable_map, grp, blk, blk_inst)) {
+			u64 *dst_blk =
+				kbase_hwcnt_dump_buffer_block_instance(dst, grp, blk, blk_inst);
 			const u64 *src_blk = dump_src + src_offset;
 
 			if (!is_undefined) {
@@ -542,12 +506,9 @@ int kbase_hwcnt_csf_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
  * @hi:   Non-NULL pointer to where high 64 bits of block enable map abstraction
  *        will be stored.
  */
-static inline void kbasep_hwcnt_backend_gpu_block_map_from_physical(
-	u32 phys,
-	u64 *lo,
-	u64 *hi)
+static inline void kbasep_hwcnt_backend_gpu_block_map_from_physical(u32 phys, u64 *lo, u64 *hi)
 {
-	u64 dwords[2] = {0, 0};
+	u64 dwords[2] = { 0, 0 };
 
 	size_t dword_idx;
 
@@ -572,9 +533,8 @@ static inline void kbasep_hwcnt_backend_gpu_block_map_from_physical(
 	*hi = dwords[1];
 }
 
-void kbase_hwcnt_gpu_enable_map_to_physical(
-	struct kbase_hwcnt_physical_enable_map *dst,
-	const struct kbase_hwcnt_enable_map *src)
+void kbase_hwcnt_gpu_enable_map_to_physical(struct kbase_hwcnt_physical_enable_map *dst,
+					    const struct kbase_hwcnt_enable_map *src)
 {
 	const struct kbase_hwcnt_metadata *metadata;
 	u64 fe_bm[EM_COUNT] = { 0 };
@@ -588,17 +548,13 @@ void kbase_hwcnt_gpu_enable_map_to_physical(
 
 	metadata = src->metadata;
 
-	kbase_hwcnt_metadata_for_each_block(
-		metadata, grp, blk, blk_inst) {
-		const u64 grp_type = kbase_hwcnt_metadata_group_type(
-			metadata, grp);
-		const u64 blk_type = kbase_hwcnt_metadata_block_type(
-			metadata, grp, blk);
-		const u64 *blk_map = kbase_hwcnt_enable_map_block_instance(
-			src, grp, blk, blk_inst);
+	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst)
+	{
+		const u64 grp_type = kbase_hwcnt_metadata_group_type(metadata, grp);
+		const u64 blk_type = kbase_hwcnt_metadata_block_type(metadata, grp, blk);
+		const u64 *blk_map = kbase_hwcnt_enable_map_block_instance(src, grp, blk, blk_inst);
 
-		if ((enum kbase_hwcnt_gpu_group_type)grp_type ==
-		    KBASE_HWCNT_GPU_GROUP_TYPE_V5) {
+		if ((enum kbase_hwcnt_gpu_group_type)grp_type == KBASE_HWCNT_GPU_GROUP_TYPE_V5) {
 			const size_t map_stride =
 				kbase_hwcnt_metadata_block_enable_map_stride(metadata, grp, blk);
 			size_t map_idx;
@@ -649,8 +605,7 @@ void kbase_hwcnt_gpu_enable_map_to_physical(
 		kbase_hwcnt_backend_gpu_block_map_to_physical(mmu_l2_bm[EM_LO], mmu_l2_bm[EM_HI]);
 }
 
-void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst,
-				     enum kbase_hwcnt_set src)
+void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst, enum kbase_hwcnt_set src)
 {
 	switch (src) {
 	case KBASE_HWCNT_SET_PRIMARY:
@@ -667,9 +622,8 @@ void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst,
 	}
 }
 
-void kbase_hwcnt_gpu_enable_map_from_physical(
-	struct kbase_hwcnt_enable_map *dst,
-	const struct kbase_hwcnt_physical_enable_map *src)
+void kbase_hwcnt_gpu_enable_map_from_physical(struct kbase_hwcnt_enable_map *dst,
+					      const struct kbase_hwcnt_physical_enable_map *src)
 {
 	const struct kbase_hwcnt_metadata *metadata;
 
@@ -692,16 +646,13 @@ void kbase_hwcnt_gpu_enable_map_from_physical(
 	kbasep_hwcnt_backend_gpu_block_map_from_physical(src->mmu_l2_bm, &mmu_l2_bm[EM_LO],
 							 &mmu_l2_bm[EM_HI]);
 
-	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst) {
-		const u64 grp_type = kbase_hwcnt_metadata_group_type(
-			metadata, grp);
-		const u64 blk_type = kbase_hwcnt_metadata_block_type(
-			metadata, grp, blk);
-		u64 *blk_map = kbase_hwcnt_enable_map_block_instance(
-			dst, grp, blk, blk_inst);
+	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst)
+	{
+		const u64 grp_type = kbase_hwcnt_metadata_group_type(metadata, grp);
+		const u64 blk_type = kbase_hwcnt_metadata_block_type(metadata, grp, blk);
+		u64 *blk_map = kbase_hwcnt_enable_map_block_instance(dst, grp, blk, blk_inst);
 
-		if ((enum kbase_hwcnt_gpu_group_type)grp_type ==
-		    KBASE_HWCNT_GPU_GROUP_TYPE_V5) {
+		if ((enum kbase_hwcnt_gpu_group_type)grp_type == KBASE_HWCNT_GPU_GROUP_TYPE_V5) {
 			const size_t map_stride =
 				kbase_hwcnt_metadata_block_enable_map_stride(metadata, grp, blk);
 			size_t map_idx;
@@ -744,29 +695,25 @@ void kbase_hwcnt_gpu_enable_map_from_physical(
 	}
 }
 
-void kbase_hwcnt_gpu_patch_dump_headers(
-	struct kbase_hwcnt_dump_buffer *buf,
-	const struct kbase_hwcnt_enable_map *enable_map)
+void kbase_hwcnt_gpu_patch_dump_headers(struct kbase_hwcnt_dump_buffer *buf,
+					const struct kbase_hwcnt_enable_map *enable_map)
 {
 	const struct kbase_hwcnt_metadata *metadata;
 	size_t grp, blk, blk_inst;
 
-	if (WARN_ON(!buf) || WARN_ON(!enable_map) ||
-	    WARN_ON(buf->metadata != enable_map->metadata))
+	if (WARN_ON(!buf) || WARN_ON(!enable_map) || WARN_ON(buf->metadata != enable_map->metadata))
 		return;
 
 	metadata = buf->metadata;
 
-	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst) {
-		const u64 grp_type =
-			kbase_hwcnt_metadata_group_type(metadata, grp);
-		u64 *buf_blk = kbase_hwcnt_dump_buffer_block_instance(
-			buf, grp, blk, blk_inst);
-		const u64 *blk_map = kbase_hwcnt_enable_map_block_instance(
-			enable_map, grp, blk, blk_inst);
+	kbase_hwcnt_metadata_for_each_block(metadata, grp, blk, blk_inst)
+	{
+		const u64 grp_type = kbase_hwcnt_metadata_group_type(metadata, grp);
+		u64 *buf_blk = kbase_hwcnt_dump_buffer_block_instance(buf, grp, blk, blk_inst);
+		const u64 *blk_map =
+			kbase_hwcnt_enable_map_block_instance(enable_map, grp, blk, blk_inst);
 
-		if ((enum kbase_hwcnt_gpu_group_type)grp_type ==
-		    KBASE_HWCNT_GPU_GROUP_TYPE_V5) {
+		if ((enum kbase_hwcnt_gpu_group_type)grp_type == KBASE_HWCNT_GPU_GROUP_TYPE_V5) {
 			const size_t map_stride =
 				kbase_hwcnt_metadata_block_enable_map_stride(metadata, grp, blk);
 			u64 prfcnt_bm[EM_COUNT] = { 0 };

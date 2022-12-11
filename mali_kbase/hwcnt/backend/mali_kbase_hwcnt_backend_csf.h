@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2021-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -27,9 +27,9 @@
 #ifndef _KBASE_HWCNT_BACKEND_CSF_H_
 #define _KBASE_HWCNT_BACKEND_CSF_H_
 
-#include "mali_kbase_hwcnt_backend.h"
-#include "mali_kbase_hwcnt_backend_csf_if.h"
-#include "mali_kbase_hwcnt_watchdog_if.h"
+#include "hwcnt/backend/mali_kbase_hwcnt_backend.h"
+#include "hwcnt/backend/mali_kbase_hwcnt_backend_csf_if.h"
+#include "hwcnt/mali_kbase_hwcnt_watchdog_if.h"
 
 /**
  * kbase_hwcnt_backend_csf_create() - Create a CSF hardware counter backend
@@ -47,10 +47,9 @@
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_backend_csf_create(
-	struct kbase_hwcnt_backend_csf_if *csf_if, u32 ring_buf_cnt,
-	struct kbase_hwcnt_watchdog_interface *watchdog_if,
-	struct kbase_hwcnt_backend_interface *iface);
+int kbase_hwcnt_backend_csf_create(struct kbase_hwcnt_backend_csf_if *csf_if, u32 ring_buf_cnt,
+				   struct kbase_hwcnt_watchdog_interface *watchdog_if,
+				   struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_metadata_init() - Initialize the metadata for a CSF
@@ -58,16 +57,14 @@ int kbase_hwcnt_backend_csf_create(
  * @iface: Non-NULL pointer to backend interface structure
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_backend_csf_metadata_init(
-	struct kbase_hwcnt_backend_interface *iface);
+int kbase_hwcnt_backend_csf_metadata_init(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_metadata_term() - Terminate the metadata for a CSF
  *                                           hardware counter backend.
  * @iface: Non-NULL pointer to backend interface structure.
  */
-void kbase_hwcnt_backend_csf_metadata_term(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_metadata_term(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_destroy() - Destroy a CSF hardware counter backend
@@ -77,8 +74,7 @@ void kbase_hwcnt_backend_csf_metadata_term(
  * Can be safely called on an all-zeroed interface, or on an already destroyed
  * interface.
  */
-void kbase_hwcnt_backend_csf_destroy(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_destroy(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_protm_entered() - CSF HWC backend function to receive
@@ -86,8 +82,7 @@ void kbase_hwcnt_backend_csf_destroy(
  *                                           has been entered.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_protm_entered(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_protm_entered(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_protm_exited() - CSF HWC backend function to receive
@@ -95,8 +90,7 @@ void kbase_hwcnt_backend_csf_protm_entered(
  *                                          been exited.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_protm_exited(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_protm_exited(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_unrecoverable_error() - CSF HWC backend function
@@ -108,8 +102,7 @@ void kbase_hwcnt_backend_csf_protm_exited(
  * with reset, or that may put HWC logic in state that could result in hang. For
  * example, on bus error, or when FW becomes unresponsive.
  */
-void kbase_hwcnt_backend_csf_on_unrecoverable_error(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_unrecoverable_error(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_before_reset() - CSF HWC backend function to be
@@ -119,16 +112,14 @@ void kbase_hwcnt_backend_csf_on_unrecoverable_error(
  *                                             were in it.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_on_before_reset(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_before_reset(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_prfcnt_sample() - CSF performance counter sample
  *                                              complete interrupt handler.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_on_prfcnt_sample(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_prfcnt_sample(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_prfcnt_threshold() - CSF performance counter
@@ -136,31 +127,27 @@ void kbase_hwcnt_backend_csf_on_prfcnt_sample(
  *                                                 interrupt handler.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_on_prfcnt_threshold(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_prfcnt_threshold(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_prfcnt_overflow() - CSF performance counter buffer
  *                                                overflow interrupt handler.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_on_prfcnt_overflow(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_prfcnt_overflow(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_prfcnt_enable() - CSF performance counter enabled
  *                                              interrupt handler.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_on_prfcnt_enable(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_prfcnt_enable(struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_on_prfcnt_disable() - CSF performance counter
  *                                               disabled interrupt handler.
  * @iface: Non-NULL pointer to HWC backend interface.
  */
-void kbase_hwcnt_backend_csf_on_prfcnt_disable(
-	struct kbase_hwcnt_backend_interface *iface);
+void kbase_hwcnt_backend_csf_on_prfcnt_disable(struct kbase_hwcnt_backend_interface *iface);
 
 #endif /* _KBASE_HWCNT_BACKEND_CSF_H_ */
