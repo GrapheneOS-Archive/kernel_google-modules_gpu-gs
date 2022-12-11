@@ -41,7 +41,7 @@
  * 4 - Added max_config support
  * 5 - Added GPU clock frequency reporting support from arbiter
  */
-#define MALI_KBASE_ARBITER_INTERFACE_VERSION 5
+#define MALI_ARBITER_INTERFACE_VERSION 5
 
 /**
  * DOC: NO_FREQ is used in case platform doesn't support reporting frequency

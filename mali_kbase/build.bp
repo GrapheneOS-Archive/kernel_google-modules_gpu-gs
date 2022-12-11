@@ -32,6 +32,7 @@ bob_defaults {
         kbuild_options: [
             "CONFIG_MALI_NO_MALI=y",
             "CONFIG_MALI_NO_MALI_DEFAULT_GPU={{.gpu}}",
+            "CONFIG_GPU_HWVER={{.hwver}}",
         ],
     },
     mali_platform_dt_pin_rst: {
@@ -51,9 +52,6 @@ bob_defaults {
     },
     mali_midgard_enable_trace: {
         kbuild_options: ["CONFIG_MALI_MIDGARD_ENABLE_TRACE=y"],
-    },
-    mali_dma_fence: {
-        kbuild_options: ["CONFIG_MALI_DMA_FENCE=y"],
     },
     mali_arbiter_support: {
         kbuild_options: ["CONFIG_MALI_ARBITER_SUPPORT=y"],
@@ -89,7 +87,7 @@ bob_defaults {
         kbuild_options: ["CONFIG_MALI_ERROR_INJECT=y"],
     },
     mali_gem5_build: {
-       kbuild_options: ["CONFIG_MALI_GEM5_BUILD=y"],
+        kbuild_options: ["CONFIG_MALI_GEM5_BUILD=y"],
     },
     mali_debug: {
         kbuild_options: [
@@ -163,9 +161,7 @@ bob_defaults {
         // (catch-all for experimental CS code without separating it into
         // different features).
         "MALI_INCREMENTAL_RENDERING_JM={{.incremental_rendering_jm}}",
-        "MALI_GPU_TIMESTAMP_CORRECTION={{.gpu_timestamp_correction}}",
         "MALI_BASE_CSF_PERFORMANCE_TESTS={{.base_csf_performance_tests}}",
-        "MALI_GPU_TIMESTAMP_INTERPOLATION={{.gpu_timestamp_interpolation}}",
     ],
 }
 

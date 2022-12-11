@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2012-2013, 2017, 2020-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2012-2013, 2017, 2020-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -19,21 +19,22 @@
  *
  */
 
-#ifndef _LINUX_DMA_BUF_TEST_EXPORTER_H_
-#define _LINUX_DMA_BUF_TEST_EXPORTER_H_
+#ifndef _UAPI_DMA_BUF_TEST_EXPORTER_H_
+#define _UAPI_DMA_BUF_TEST_EXPORTER_H_
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
 
-#define DMA_BUF_TE_VER_MAJOR 1
-#define DMA_BUF_TE_VER_MINOR 0
 #define DMA_BUF_TE_ENQ 0x642d7465
 #define DMA_BUF_TE_ACK 0x68692100
 
 struct dma_buf_te_ioctl_version {
-	int op;    /**< Must be set to DMA_BUF_TE_ENQ by client, driver will set it to DMA_BUF_TE_ACK */
-	int major; /**< Major version */
-	int minor; /**< Minor version */
+	/** Must be set to DMA_BUF_TE_ENQ by client, driver will set it to DMA_BUF_TE_ACK */
+	int op;
+	/** Major version */
+	int major;
+	/** Minor version */
+	int minor;
 };
 
 struct dma_buf_te_ioctl_alloc {
@@ -46,7 +47,7 @@ struct dma_buf_te_ioctl_status {
 	/* out */
 	int attached_devices; /* number of devices attached (active 'dma_buf_attach's) */
 	int device_mappings; /* number of device mappings (active 'dma_buf_map_attachment's) */
-	int cpu_mappings;    /* number of cpu mappings (active 'mmap's) */
+	int cpu_mappings; /* number of cpu mappings (active 'mmap's) */
 };
 
 struct dma_buf_te_ioctl_set_failing {
@@ -66,11 +67,12 @@ struct dma_buf_te_ioctl_fill {
 
 #define DMA_BUF_TE_IOCTL_BASE 'E'
 /* Below all returning 0 if successful or -errcode except DMA_BUF_TE_ALLOC which will return fd or -errcode */
-#define DMA_BUF_TE_VERSION         _IOR(DMA_BUF_TE_IOCTL_BASE, 0x00, struct dma_buf_te_ioctl_version)
-#define DMA_BUF_TE_ALLOC           _IOR(DMA_BUF_TE_IOCTL_BASE, 0x01, struct dma_buf_te_ioctl_alloc)
-#define DMA_BUF_TE_QUERY           _IOR(DMA_BUF_TE_IOCTL_BASE, 0x02, struct dma_buf_te_ioctl_status)
-#define DMA_BUF_TE_SET_FAILING     _IOW(DMA_BUF_TE_IOCTL_BASE, 0x03, struct dma_buf_te_ioctl_set_failing)
-#define DMA_BUF_TE_ALLOC_CONT      _IOR(DMA_BUF_TE_IOCTL_BASE, 0x04, struct dma_buf_te_ioctl_alloc)
-#define DMA_BUF_TE_FILL            _IOR(DMA_BUF_TE_IOCTL_BASE, 0x05, struct dma_buf_te_ioctl_fill)
+#define DMA_BUF_TE_VERSION _IOR(DMA_BUF_TE_IOCTL_BASE, 0x00, struct dma_buf_te_ioctl_version)
+#define DMA_BUF_TE_ALLOC _IOR(DMA_BUF_TE_IOCTL_BASE, 0x01, struct dma_buf_te_ioctl_alloc)
+#define DMA_BUF_TE_QUERY _IOR(DMA_BUF_TE_IOCTL_BASE, 0x02, struct dma_buf_te_ioctl_status)
+#define DMA_BUF_TE_SET_FAILING                                                                     \
+	_IOW(DMA_BUF_TE_IOCTL_BASE, 0x03, struct dma_buf_te_ioctl_set_failing)
+#define DMA_BUF_TE_ALLOC_CONT _IOR(DMA_BUF_TE_IOCTL_BASE, 0x04, struct dma_buf_te_ioctl_alloc)
+#define DMA_BUF_TE_FILL _IOR(DMA_BUF_TE_IOCTL_BASE, 0x05, struct dma_buf_te_ioctl_fill)
 
-#endif /* _LINUX_DMA_BUF_TEST_EXPORTER_H_ */
+#endif /* _UAPI_DMA_BUF_TEST_EXPORTER_H_ */
