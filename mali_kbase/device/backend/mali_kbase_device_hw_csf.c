@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2020-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2020-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -83,7 +83,7 @@ static void kbase_gpu_fault_interrupt(struct kbase_device *kbdev)
 
 }
 
-#if CONFIG_MALI_HOST_CONTROLS_SC_RAILS
+#ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
 /* When the GLB_PWROFF_TIMER expires, FW will write the SHADER_PWROFF register, this sequence
  * follows:
  *  - SHADER_PWRTRANS goes high
@@ -177,7 +177,9 @@ void kbase_gpu_interrupt(struct kbase_device *kbdev, u32 val)
 
 		dev_dbg(kbdev->dev, "Doorbell mirror interrupt received");
 		spin_lock_irqsave(&kbdev->hwaccess_lock, flags);
+#ifdef CONFIG_MALI_DEBUG
 		WARN_ON(!kbase_csf_scheduler_get_nr_active_csgs(kbdev));
+#endif
 		kbase_pm_disable_db_mirror_interrupt(kbdev);
 		kbdev->pm.backend.exit_gpu_sleep_mode = true;
 		kbase_csf_scheduler_invoke_tick(kbdev);
@@ -197,7 +199,7 @@ void kbase_gpu_interrupt(struct kbase_device *kbdev, u32 val)
 	if (val & CLEAN_CACHES_COMPLETED)
 		kbase_clean_caches_done(kbdev);
 
-#if CONFIG_MALI_HOST_CONTROLS_SC_RAILS
+#ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
 	if (val & POWER_CHANGED_ALL) {
 		unsigned long flags;
 		spin_lock_irqsave(&kbdev->hwaccess_lock, flags);

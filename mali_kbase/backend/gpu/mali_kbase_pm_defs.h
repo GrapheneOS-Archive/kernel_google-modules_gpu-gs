@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2014-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2014-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -136,7 +136,7 @@ struct kbasep_pm_metrics {
  *           or removed from a GPU slot.
  *  @active_cl_ctx: number of CL jobs active on the GPU. Array is per-device.
  *  @active_gl_ctx: number of GL jobs active on the GPU. Array is per-slot.
- *  @lock: spinlock protecting the kbasep_pm_metrics_data structure
+ *  @lock: spinlock protecting the kbasep_pm_metrics_state structure
  *  @platform_data: pointer to data controlled by platform specific code
  *  @kbdev: pointer to kbase device for which metrics are collected
  *  @values: The current values of the power management metrics. The
@@ -145,7 +145,7 @@ struct kbasep_pm_metrics {
  *  @initialized: tracks whether metrics_state has been initialized or not.
  *  @timer: timer to regularly make DVFS decisions based on the power
  *           management metrics.
- *  @timer_active: boolean indicating @timer is running
+ *  @timer_state: atomic indicating current @timer state, on, off, or stopped.
  *  @dvfs_last: values of the PM metrics from the last DVFS tick
  *  @dvfs_diff: different between the current and previous PM metrics.
  */
@@ -169,7 +169,7 @@ struct kbasep_pm_metrics_state {
 #ifdef CONFIG_MALI_MIDGARD_DVFS
 	bool initialized;
 	struct hrtimer timer;
-	bool timer_active;
+	atomic_t timer_state;
 	struct kbasep_pm_metrics dvfs_last;
 	struct kbasep_pm_metrics dvfs_diff;
 #endif
@@ -333,6 +333,8 @@ struct kbase_pm_event_log {
  *                               &struct kbase_pm_callback_conf
  * @callback_soft_reset: Optional callback to software reset the GPU. See
  *                       &struct kbase_pm_callback_conf
+ * @callback_hardware_reset: Optional callback to hardware reset the GPU. See
+ *                           &struct kbase_pm_callback_conf
  * @callback_power_runtime_gpu_idle: Callback invoked by Kbase when GPU has
  *                                   become idle.
  *                                   See &struct kbase_pm_callback_conf.
@@ -503,6 +505,7 @@ struct kbase_pm_backend_data {
 	void (*callback_power_runtime_off)(struct kbase_device *kbdev);
 	int (*callback_power_runtime_idle)(struct kbase_device *kbdev);
 	int (*callback_soft_reset)(struct kbase_device *kbdev);
+	void (*callback_hardware_reset)(struct kbase_device *kbdev);
 	void (*callback_power_runtime_gpu_idle)(struct kbase_device *kbdev);
 	void (*callback_power_runtime_gpu_active)(struct kbase_device *kbdev);
 #ifdef CONFIG_MALI_HOST_CONTROLS_SC_RAILS
@@ -569,7 +572,7 @@ struct kbase_pm_backend_data {
 };
 
 #if MALI_USE_CSF
-/* CSF PM flag, signaling that the MCU CORE should be kept on */
+/* CSF PM flag, signaling that the MCU shader Core should be kept on */
 #define  CSF_DYNAMIC_PM_CORE_KEEP_ON (1 << 0)
 /* CSF PM flag, signaling no scheduler suspension on idle groups */
 #define CSF_DYNAMIC_PM_SCHED_IGNORE_IDLE (1 << 1)

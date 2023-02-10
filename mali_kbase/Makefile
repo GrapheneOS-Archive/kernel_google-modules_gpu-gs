@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
-# (C) COPYRIGHT 2010-2021 ARM Limited. All rights reserved.
+# (C) COPYRIGHT 2010-2022 ARM Limited. All rights reserved.
 #
 # This program is free software and is provided to you under the terms of the
 # GNU General Public License version 2 as published by the Free Software
@@ -36,9 +36,6 @@ endif
 # Core kbase configuration options
 CONFIG_MALI_EXPERT=y
 CONFIG_MALI_MIDGARD_DVFS=y
-ifneq ($(CONFIG_SOC_GS101),y)
-CONFIG_MALI_CSF_SUPPORT=y
-endif
 
 # Pixel integration specific configuration options
 CONFIG_MALI_PLATFORM_NAME="pixel"
@@ -46,10 +43,6 @@ CONFIG_MALI_PIXEL_GPU_QOS ?= y
 CONFIG_MALI_PIXEL_GPU_BTS ?= y
 CONFIG_MALI_PIXEL_GPU_SECURE_RENDERING ?= y
 CONFIG_MALI_PIXEL_GPU_THERMAL ?= y
-ifeq ($(CONFIG_MALI_CSF_SUPPORT),y)
-CONFIG_MALI_PIXEL_GPU_SSCD ?= y
-endif
-CONFIG_MALI_HOST_CONTROLS_SC_RAILS ?= y
 
 #
 # Default configuration values
@@ -144,7 +137,6 @@ ifeq ($(CONFIG_MALI_MIDGARD),m)
         CONFIG_MALI_ERROR_INJECT = n
         CONFIG_MALI_HW_ERRATA_1485982_NOT_AFFECTED = n
         CONFIG_MALI_HW_ERRATA_1485982_USE_CLOCK_ALTERNATIVE = n
-        CONFIG_MALI_HOST_CONTROLS_SC_RAILS = n
         CONFIG_MALI_PRFCNT_SET_SELECT_VIA_DEBUG_FS = n
         CONFIG_MALI_DEBUG = n
         CONFIG_MALI_MIDGARD_ENABLE_TRACE = n
@@ -157,16 +149,19 @@ ifeq ($(CONFIG_MALI_MIDGARD),m)
         ifeq ($(CONFIG_MALI_KUTF), y)
             CONFIG_MALI_KUTF_IRQ_TEST ?= y
             CONFIG_MALI_KUTF_CLK_RATE_TRACE ?= y
+            CONFIG_MALI_KUTF_MGM_INTEGRATION_TEST ?= y
         else
             # Prevent misuse when CONFIG_MALI_KUTF=n
             CONFIG_MALI_KUTF_IRQ_TEST = n
             CONFIG_MALI_KUTF_CLK_RATE_TRACE = n
+            CONFIG_MALI_KUTF_MGM_INTEGRATION_TEST = n
         endif
     else
         # Prevent misuse when CONFIG_MALI_DEBUG=n
         CONFIG_MALI_KUTF = n
         CONFIG_MALI_KUTF_IRQ_TEST = n
         CONFIG_MALI_KUTF_CLK_RATE_TRACE = n
+        CONFIG_MALI_KUTF_MGM_INTEGRATION_TEST = n
     endif
 else
     # Prevent misuse when CONFIG_MALI_MIDGARD=n
@@ -176,12 +171,12 @@ else
     CONFIG_MALI_KUTF = n
     CONFIG_MALI_KUTF_IRQ_TEST = n
     CONFIG_MALI_KUTF_CLK_RATE_TRACE = n
+    CONFIG_MALI_KUTF_MGM_INTEGRATION_TEST = n
 endif
 
 # All Mali CONFIG should be listed here
 CONFIGS := \
     CONFIG_MALI_MIDGARD \
-    CONFIG_MALI_CSF_SUPPORT \
     CONFIG_MALI_GATOR_SUPPORT \
     CONFIG_MALI_DMA_FENCE \
     CONFIG_MALI_ARBITER_SUPPORT \
@@ -205,7 +200,6 @@ CONFIGS := \
     CONFIG_MALI_ERROR_INJECT \
     CONFIG_MALI_HW_ERRATA_1485982_NOT_AFFECTED \
     CONFIG_MALI_HW_ERRATA_1485982_USE_CLOCK_ALTERNATIVE \
-    CONFIG_MALI_HOST_CONTROLS_SC_RAILS \
     CONFIG_MALI_PRFCNT_SET_PRIMARY \
     CONFIG_MALI_PRFCNT_SET_SECONDARY \
     CONFIG_MALI_PRFCNT_SET_TERTIARY \
@@ -217,6 +211,7 @@ CONFIGS := \
     CONFIG_MALI_KUTF \
     CONFIG_MALI_KUTF_IRQ_TEST \
     CONFIG_MALI_KUTF_CLK_RATE_TRACE \
+    CONFIG_MALI_KUTF_MGM_INTEGRATION_TEST \
     CONFIG_MALI_XEN
 
 # Pixel integration CONFIG options
@@ -224,8 +219,7 @@ CONFIGS += \
     CONFIG_MALI_PIXEL_GPU_QOS \
     CONFIG_MALI_PIXEL_GPU_BTS \
     CONFIG_MALI_PIXEL_GPU_THERMAL \
-    CONFIG_MALI_PIXEL_GPU_SECURE_RENDERING \
-    CONFIG_MALI_PIXEL_GPU_SSCD
+    CONFIG_MALI_PIXEL_GPU_SECURE_RENDERING
 
 
 #
@@ -257,6 +251,26 @@ EXTRA_CFLAGS += -DCONFIG_MALI_PLATFORM_NAME=$(CONFIG_MALI_PLATFORM_NAME)
 #
 # KBUILD_EXTRA_SYMBOLS to prevent warnings about unknown functions
 #
+
+# The following were added to align with W=1 in scripts/Makefile.extrawarn
+# from the Linux source tree
+KBUILD_CFLAGS += -Wall -Werror
+KBUILD_CFLAGS += -Wextra -Wunused -Wno-unused-parameter
+KBUILD_CFLAGS += -Wmissing-declarations
+KBUILD_CFLAGS += -Wmissing-format-attribute
+KBUILD_CFLAGS += -Wmissing-prototypes
+KBUILD_CFLAGS += -Wold-style-definition
+KBUILD_CFLAGS += -Wmissing-include-dirs
+KBUILD_CFLAGS += $(call cc-option, -Wunused-but-set-variable)
+KBUILD_CFLAGS += $(call cc-option, -Wunused-const-variable)
+KBUILD_CFLAGS += $(call cc-option, -Wpacked-not-aligned)
+KBUILD_CFLAGS += $(call cc-option, -Wstringop-truncation)
+# The following turn off the warnings enabled by -Wextra
+KBUILD_CFLAGS += -Wno-missing-field-initializers
+KBUILD_CFLAGS += -Wno-sign-compare
+KBUILD_CFLAGS += -Wno-type-limits
+
+KBUILD_CPPFLAGS += -DKBUILD_EXTRA_WARN1
 
 all:
 	$(MAKE) -C $(KDIR) M=$(M) W=1 $(MAKE_ARGS) EXTRA_CFLAGS="$(EXTRA_CFLAGS)" KBUILD_EXTRA_SYMBOLS="$(EXTRA_SYMBOLS)" modules

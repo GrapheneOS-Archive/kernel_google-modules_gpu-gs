@@ -154,8 +154,7 @@
 /* Maximum number of pages of memory that require a permanent mapping, per
  * kbase_context
  */
-#define KBASE_PERMANENTLY_MAPPED_MEM_LIMIT_PAGES ((32 * 1024ul * 1024ul) >> \
-								PAGE_SHIFT)
+#define KBASE_PERMANENTLY_MAPPED_MEM_LIMIT_PAGES ((64 * 1024ul * 1024ul) >> PAGE_SHIFT)
 /* Minimum threshold period for hwcnt dumps between different hwcnt virtualizer
  * clients, to reduce undesired system load.
  * If a virtualizer client requests a dump within this threshold period after
@@ -581,7 +580,7 @@ struct kbase_devfreq_opp {
  * @entry_set_pte:    program the pte to be a valid entry to encode the physical
  *                    address of the next lower level page table and also update
  *                    the number of valid entries.
- * @entry_invalidate: clear out or invalidate the pte.
+ * @entries_invalidate: clear out or invalidate a range of ptes.
  * @get_num_valid_entries: returns the number of valid entries for a specific pgd.
  * @set_num_valid_entries: sets the number of valid entries for a specific pgd
  * @flags:            bitmask of MMU mode flags. Refer to KBASE_MMU_MODE_ constants.
@@ -598,8 +597,8 @@ struct kbase_mmu_mode {
 	int (*pte_is_valid)(u64 pte, int level);
 	void (*entry_set_ate)(u64 *entry, struct tagged_addr phy,
 			unsigned long flags, int level);
-	void (*entry_set_pte)(u64 *pgd, u64 vpfn, phys_addr_t phy);
-	void (*entry_invalidate)(u64 *entry);
+	void (*entry_set_pte)(u64 *entry, phys_addr_t phy);
+	void (*entries_invalidate)(u64 *entry, u32 count);
 	unsigned int (*get_num_valid_entries)(u64 *pgd);
 	void (*set_num_valid_entries)(u64 *pgd,
 				      unsigned int num_of_valid_entries);
@@ -978,11 +977,8 @@ struct kbase_process {
  *                          @total_gpu_pages for both native and dma-buf imported
  *                          allocations.
  * @job_done_worker:        Worker for job_done work.
- * @job_done_worker_thread: Thread for job_done work.
  * @event_worker:           Worker for event work.
- * @event_worker_thread:    Thread for event work.
  * @apc.worker:             Worker for async power control work.
- * @apc.thread:             Thread for async power control work.
  * @apc.power_on_work:      Work struct for powering on the GPU.
  * @apc.power_off_work:     Work struct for powering off the GPU.
  * @apc.end_ts:             The latest end timestamp to power off the GPU.
@@ -1189,11 +1185,8 @@ struct kbase_device {
 #endif
 	bool poweroff_pending;
 
-#if (KERNEL_VERSION(4, 4, 0) <= LINUX_VERSION_CODE)
 	bool infinite_cache_active_default;
-#else
-	u32 infinite_cache_active_default;
-#endif
+
 	struct kbase_mem_pool_group_config mem_pool_defaults;
 
 	u32 current_gpu_coherency_mode;
@@ -1242,9 +1235,7 @@ struct kbase_device {
 	struct kbasep_js_device_data js_data;
 
 	struct kthread_worker job_done_worker;
-	struct task_struct *job_done_worker_thread;
 	struct kthread_worker event_worker;
-	struct task_struct *event_worker_thread;
 
 	/* See KBASE_JS_*_PRIORITY_MODE for details. */
 	u32 js_ctx_scheduling_mode;
@@ -1260,7 +1251,6 @@ struct kbase_device {
 
 	struct {
 		struct kthread_worker worker;
-		struct task_struct *thread;
 		struct kthread_work power_on_work;
 		struct kthread_work power_off_work;
 		ktime_t end_ts;
@@ -1970,17 +1960,15 @@ struct kbasep_gwt_list_element {
  *                                 to a @kbase_context.
  * @ext_res_node:                  List head for adding the metadata to a
  *                                 @kbase_context.
- * @alloc:                         The physical memory allocation structure
- *                                 which is mapped.
- * @gpu_addr:                      The GPU virtual address the resource is
- *                                 mapped to.
+ * @reg:                           External resource information, containing
+ *                                 the corresponding VA region
  * @ref:                           Reference count.
  *
  * External resources can be mapped into multiple contexts as well as the same
  * context multiple times.
- * As kbase_va_region itself isn't refcounted we can't attach our extra
- * information to it as it could be removed under our feet leaving external
- * resources pinned.
+ * As kbase_va_region is refcounted, we guarantee that it will be available
+ * for the duration of the external resource, meaning it is sufficient to use
+ * it to rederive any additional data, like the GPU address.
  * This metadata structure binds a single external resource to a single
  * context, ensuring that per context mapping is tracked separately so it can
  * be overridden when needed and abuses by the application (freeing the resource
@@ -1988,8 +1976,7 @@ struct kbasep_gwt_list_element {
  */
 struct kbase_ctx_ext_res_meta {
 	struct list_head ext_res_node;
-	struct kbase_mem_phy_alloc *alloc;
-	u64 gpu_addr;
+	struct kbase_va_region *reg;
 	u32 ref;
 };
 
@@ -2044,6 +2031,8 @@ static inline u64 kbase_get_lock_region_min_size_log2(struct kbase_gpu_props con
 /* Maximum number of loops polling the GPU for a cache flush before we assume it must have completed */
 #define KBASE_CLEAN_CACHE_MAX_LOOPS     100000
 /* Maximum number of loops polling the GPU for an AS command to complete before we assume the GPU has hung */
-#define KBASE_AS_INACTIVE_MAX_LOOPS     100000000
+#define KBASE_AS_INACTIVE_MAX_LOOPS     100000
+/* Maximum number of loops polling the GPU PRFCNT_ACTIVE bit before we assume the GPU has hung */
+#define KBASE_PRFCNT_ACTIVE_MAX_LOOPS   100000000
 
 #endif /* _KBASE_DEFS_H_ */

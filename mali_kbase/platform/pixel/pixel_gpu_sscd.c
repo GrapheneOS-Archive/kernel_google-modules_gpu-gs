@@ -31,13 +31,14 @@ static void sscd_release(struct device *dev)
 }
 
 static struct sscd_platform_data sscd_pdata;
-static struct platform_device sscd_dev = { .name = "mali",
-					   .driver_override = SSCD_NAME,
-					   .id = -1,
-					   .dev = {
-						   .platform_data = &sscd_pdata,
-						   .release = sscd_release,
-					   } };
+const static struct platform_device sscd_dev_init = { .name = "mali",
+						      .driver_override = SSCD_NAME,
+						      .id = -1,
+						      .dev = {
+							      .platform_data = &sscd_pdata,
+							      .release = sscd_release,
+						      } };
+static struct platform_device sscd_dev;
 
 enum
 {
@@ -115,7 +116,7 @@ static void get_fw_trace(struct kbase_device *kbdev, struct sscd_segment *seg)
 		.version = 1,
 	};
 
-	tb = kbase_csf_firmware_get_trace_buffer(kbdev, FW_TRACE_BUF_NAME);
+	tb = kbase_csf_firmware_get_trace_buffer(kbdev, FIRMWARE_LOG_BUF_NAME);
 
 	if (tb == NULL) {
 		dev_err(kbdev->dev, "pixel: failed to open firmware trace buffer");
@@ -307,22 +308,23 @@ void gpu_sscd_dump(struct kbase_device *kbdev, const char* reason)
 }
 
 /**
- * gpu_sscd_fw_log_init() - Set's the FW log verbosity which enables logging.
+ * gpu_sscd_fw_log_init() - Set's the FW log verbosity.
  *
  * @kbdev: The &struct kbase_device for the GPU.
+ * @level: The log verbosity.
  *
  * Context: Process context.
  *
  * Return: On success returns 0, otherwise returns an error code.
  */
-int gpu_sscd_fw_log_init(struct kbase_device *kbdev)
+int gpu_sscd_fw_log_init(struct kbase_device *kbdev, u32 level)
 {
 	u32 addr;
 	int ec = kbase_csf_firmware_cfg_find_config_address(kbdev, "Log verbosity", &addr);
 
 	if (!ec) {
 		/* Update the FW log verbosity in FW memory */
-		kbase_csf_update_firmware_memory(kbdev, addr, 1);
+		kbase_csf_update_firmware_memory(kbdev, addr, level);
 	}
 
 	return ec;
@@ -339,6 +341,7 @@ int gpu_sscd_fw_log_init(struct kbase_device *kbdev)
  */
 int gpu_sscd_init(struct kbase_device *kbdev)
 {
+	sscd_dev = sscd_dev_init;
 	return platform_device_register(&sscd_dev);
 }
 

@@ -194,8 +194,6 @@ struct kbase_jd_atom_dependency {
 static inline const struct kbase_jd_atom *
 kbase_jd_katom_dep_atom(const struct kbase_jd_atom_dependency *dep)
 {
-	KBASE_DEBUG_ASSERT(dep != NULL);
-
 	return (const struct kbase_jd_atom *)(dep->atom);
 }
 
@@ -209,8 +207,6 @@ kbase_jd_katom_dep_atom(const struct kbase_jd_atom_dependency *dep)
 static inline u8 kbase_jd_katom_dep_type(
 		const struct kbase_jd_atom_dependency *dep)
 {
-	KBASE_DEBUG_ASSERT(dep != NULL);
-
 	return dep->dep_type;
 }
 
@@ -227,8 +223,6 @@ static inline void kbase_jd_katom_dep_set(
 {
 	struct kbase_jd_atom_dependency *dep;
 
-	KBASE_DEBUG_ASSERT(const_dep != NULL);
-
 	dep = (struct kbase_jd_atom_dependency *)const_dep;
 
 	dep->atom = a;
@@ -244,8 +238,6 @@ static inline void kbase_jd_katom_dep_clear(
 		const struct kbase_jd_atom_dependency *const_dep)
 {
 	struct kbase_jd_atom_dependency *dep;
-
-	KBASE_DEBUG_ASSERT(const_dep != NULL);
 
 	dep = (struct kbase_jd_atom_dependency *)const_dep;
 
@@ -361,19 +353,6 @@ enum kbase_atom_exit_protected_state {
 };
 
 /**
- * struct kbase_ext_res - Contains the info for external resources referred
- *                        by an atom, which have been mapped on GPU side.
- * @gpu_address:          Start address of the memory region allocated for
- *                        the resource from GPU virtual address space.
- * @alloc:                pointer to physical pages tracking object, set on
- *                        mapping the external resource on GPU side.
- */
-struct kbase_ext_res {
-	u64 gpu_address;
-	struct kbase_mem_phy_alloc *alloc;
-};
-
-/**
  * struct kbase_jd_atom  - object representing the atom, containing the complete
  *                         state and attributes of an atom.
  * @work:                  work item for the bottom half processing of the atom,
@@ -406,7 +385,8 @@ struct kbase_ext_res {
  *                         each allocation is read in order to enforce an
  *                         overall physical memory usage limit.
  * @nr_extres:             number of external resources referenced by the atom.
- * @extres:                pointer to the location containing info about
+ * @extres:                Pointer to @nr_extres VA regions containing the external
+ *                         resource allocation and other information.
  *                         @nr_extres external resources referenced by the atom.
  * @device_nr:             indicates the coregroup with which the atom is
  *                         associated, when
@@ -516,7 +496,6 @@ struct kbase_ext_res {
  *                 BASE_JD_REQ_START_RENDERPASS set in its core requirements
  *                 with an atom that has BASE_JD_REQ_END_RENDERPASS set.
  * @jc_fragment:          Set of GPU fragment job chains
- * @retry_count:          TODO: Not used,to be removed
  */
 struct kbase_jd_atom {
 	struct kthread_work work;
@@ -536,7 +515,7 @@ struct kbase_jd_atom {
 #endif /* MALI_JIT_PRESSURE_LIMIT_BASE */
 
 	u16 nr_extres;
-	struct kbase_ext_res *extres;
+	struct kbase_va_region **extres;
 
 	u32 device_nr;
 	u64 jc;
@@ -627,8 +606,6 @@ struct kbase_jd_atom {
 
 	u32 atom_flags;
 
-	int retry_count;
-
 	enum kbase_atom_gpu_rb_state gpu_rb_state;
 
 	bool need_cache_flush_cores_retained;
@@ -672,7 +649,7 @@ static inline bool kbase_jd_katom_is_protected(
 }
 
 /**
- * kbase_atom_is_younger - query if one atom is younger by age than another
+ * kbase_jd_atom_is_younger - query if one atom is younger by age than another
  *
  * @katom_a: the first atom
  * @katom_b: the second atom
